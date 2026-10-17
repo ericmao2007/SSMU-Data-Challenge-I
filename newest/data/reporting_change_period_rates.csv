@@ -1,0 +1,7 @@
+stage,year,days,harm_daily,property_proxy_daily,unknown_daily
+Before lockdown,2019,14,117.92857142857143,461.2142857142857,0.0
+Before lockdown,2020,14,78.5,296.5,0.0
+"Lockdown, before reporting change",2019,14,117.64285714285714,459.07142857142856,0.0
+"Lockdown, before reporting change",2020,14,33.57142857142857,137.14285714285714,0.0
+After reporting change,2019,14,115.28571428571429,449.42857142857144,0.0
+After reporting change,2020,14,32.57142857142857,93.14285714285714,0.0

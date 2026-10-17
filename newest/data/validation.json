@@ -1,0 +1,57 @@
+{
+  "sources": {
+    "crashes": "https://data.cityofnewyork.us/Transportation/Motor-Vehicle-Collisions-Crashes/h9gi-nx95",
+    "vision_zero": "https://www.nyc.gov/site/dcas/about/press-releases/jan-15-2014-press-release.page",
+    "reporting": "https://www.nyc.gov/site/nypd/news/p0403b/nypd-expanding-successful-non-injury-collision-pilot-save-nypd-resources",
+    "34ave": "https://www.nyc.gov/html/dot/html/about/34ave.shtml",
+    "34ave_design": "https://www.nyc.gov/html/dot/html/about/projects-2025.shtml",
+    "34ave_launch_month": "https://www.nyc.gov/html/dot/downloads/pdf/34th-ave-open-street-apr2022.pdf",
+    "permanence_vote": "https://legistar.council.nyc.gov/LegislationDetail.aspx?GUID=796B94D6-9FD4-4448-8E8A-9A631444F421&ID=4424528&Options=&Search=",
+    "street_centerlines": "https://data.cityofnewyork.us/d/inkn-q76z"
+  },
+  "source_accessed": "2026-10-17",
+  "notebook_contains_markdown": false,
+  "graphs": [
+    "01_covid_normalized_comparison.png",
+    "02_covid_monthly_values_and_coverage.png",
+    "03_vision_zero_before_after_trends.png",
+    "04_reporting_change_stacked_rates.png",
+    "05_reporting_change_monthly_trends.png",
+    "06_34ave_before_after_map.png",
+    "07_34ave_crashes_over_time.png",
+    "08_34ave_period_comparison.png"
+  ],
+  "covid_denominator": "Sum of mean-site daily sampled traffic on the same dates as outcome counts; outcomes divided by denominator and multiplied by 10,000, without baseline indexing.",
+  "covid_no_sample_months_2020": [
+    "2020-04-01",
+    "2020-05-01",
+    "2020-06-01",
+    "2020-07-01"
+  ],
+  "property_only_definition": "Known zero injured and killed; proxy for property-damage-only reports, not unobserved collisions.",
+  "34ave": {
+    "named_corridor_candidates": 1244,
+    "spatial_outliers": 0,
+    "missing_coordinates_retained": 22,
+    "selected_crashes": 1254,
+    "mapped_crashes": 1232,
+    "unknown_harm_status": 6,
+    "distance_m": 35,
+    "definition": "Named 34 AVE on/cross street, within 35m of official corridor centerlines including intersections. Missing coordinates retained only with Queens and an explicit corridor cross street.",
+    "west_endpoint": [
+      -73.89715853745,
+      40.752465237073
+    ],
+    "east_endpoint": [
+      -73.87269143245851,
+      40.7550334118905
+    ],
+    "geometry_is_current_not_historical": true
+  },
+  "inputs_sha256": {
+    "data/processed/daily_policy_panel.csv": "d06553871d02f67184402d8fda318dc97a4225e80838311f0cfd4927dc9d2b6a",
+    "data/processed/monthly_policy_panel.csv": "b6c2f8af541b94c7df141e337971dc2a0d96df92dc176728639239140b8bb3e3",
+    "data/processed/daily_crashes_with_traffic_coverage.csv": "f02a26063e931e3372893efae009152cf99d9cb407b3d7490b5b4476b8d91d21",
+    "newest/data/street_centerlines.json": "49946ba8504c9dc63c2e5ec8306be0208d6002b51b19e97cd96d1437913b7bd6"
+  }
+}
