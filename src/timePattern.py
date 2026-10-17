@@ -1,4 +1,4 @@
-"""Create draggable time-pattern charts: python3 src/timePattern.py.
+"""Create traffic-adjusted time-pattern charts: python3 src/timePattern.py.
 
 Install: python3 -m pip install -r requirements.txt
 Saves a standalone webpage that works offline. Add --no-open to save only.
@@ -10,11 +10,25 @@ import webbrowser
 
 import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 
 ROOT = Path(__file__).resolve().parents[1]
 INJURIES = "NUMBER OF PERSONS INJURED"
 BLUE = "#2563eb"
+TRAFFIC_FILE = ROOT / "data/other/Combined_Traffic_Volume_Counts_hourly.csv"
+TRAFFIC_COMMIT = "f92bea87dff7ee7a57e41b4af85535f571d1f5a1"
+TRAFFIC_SOURCE = ("https://github.com/ericmao2007/SSMU-Data-Challenge-I/blob/"
+                  f"{TRAFFIC_COMMIT}/data/other/Combined_Traffic_Volume_Counts_hourly.zip")
+SITE_COLUMNS = ["SegmentID", "Direction", "Roadway Name", "From", "To"]
+HOUR_COLUMNS = [
+    "12:00-1:00 AM", "1:00-2:00AM", "2:00-3:00AM", "3:00-4:00AM",
+    "4:00-5:00AM", "5:00-6:00AM", "6:00-7:00AM", "7:00-8:00AM",
+    "8:00-9:00AM", "9:00-10:00AM", "10:00-11:00AM", "11:00-12:00PM",
+    "12:00-1:00PM", "1:00-2:00PM", "2:00-3:00PM", "3:00-4:00PM",
+    "4:00-5:00PM", "5:00-6:00PM", "6:00-7:00PM", "7:00-8:00PM",
+    "8:00-9:00PM", "9:00-10:00PM", "10:00-11:00PM", "11:00-12:00AM",
+]
 
 
 def load_patterns(csv_path):
@@ -47,110 +61,307 @@ def load_patterns(csv_path):
     return daily, hourly, exclusions
 
 
-def hourly_chart(daily, hourly):
-    """The year slider compares average injuries at each hour of a day."""
-    years = sorted(daily.index.year.unique())
-    options = [("All years", None)] + [(str(year), year) for year in years]
-    steps = []
-    averages = []
+def load_traffic(csv_path):
+    """Average complete traffic observations per sampled location, not total sensors.
+
+    A location is a segment/direction/street-endpoints combination. Repeated
+    observations of that location on one date are averaged before averaging
+    locations. Require all 24 counts so the sampled sites are consistent within
+    each day. This does not correct changing site composition between days.
+    """
+    columns = pd.read_csv(csv_path, nrows=0).columns
+    if {"date", "hour", "volume", "segment_id"}.issubset(columns):
+        return load_combined_traffic(csv_path)
+    raw = pd.read_csv(csv_path, dtype={"SegmentID": "string"})
+    dates = pd.to_datetime(raw["Date"], format="mixed", errors="coerce").dt.normalize()
+    volumes = raw[HOUR_COLUMNS].apply(
+        lambda column: pd.to_numeric(
+            column.astype("string").str.replace(",", "", regex=False).str.strip(), errors="coerce"
+        )
+    )
+    sites = raw[SITE_COLUMNS].astype("string").apply(
+        lambda column: column.str.strip().str.upper().str.replace(r"\s+", " ", regex=True)
+    )
+    valid = (dates.notna() & sites.notna().all(axis=1) & sites.ne("").all(axis=1)
+             & volumes.notna().all(axis=1) & volumes.ge(0).all(axis=1))
+    records = pd.concat([dates.rename("date"), sites, volumes], axis=1).loc[valid]
+    site_days = records.groupby(["date", *SITE_COLUMNS])[HOUR_COLUMNS].mean()
+    exposure = site_days.groupby(level="date").mean()
+    exposure.columns = range(24)
+    exposure["sites"] = site_days.groupby(level="date").size()
+    if exposure.empty:
+        raise ValueError("No traffic observations with a valid date and 24 complete hourly counts.")
+    site_years = site_days.reset_index()[["date", *SITE_COLUMNS]]
+    site_years["year"] = site_years["date"].dt.year
+    years_per_site = site_years.groupby(SITE_COLUMNS)["year"].nunique()
+    common_sites = int(years_per_site.eq(site_years["year"].nunique()).sum())
+    report = {"input_rows": len(raw), "excluded_rows": int((~valid).sum()),
+              "repeated_site_days": len(records) - len(site_days), "common_sites": common_sites}
+    return exposure, report
+
+
+def load_combined_traffic(csv_path):
+    """Convert long hourly counts to complete site-days before averaging sites.
+
+    Automated hours require all four quarter-hour intervals. Historical rows
+    already represent hours. Never add hist_volume to volume: it is a reference
+    field for overlapping sources, not additional traffic.
+    """
+    raw = pd.read_csv(csv_path, dtype={"segment_id": "string"}, usecols=[
+        "source", "segment_id", "direction", "roadway_name", "from_street",
+        "to_street", "date", "hour", "volume", "intervals",
+    ])
+    raw = raw.rename(columns=dict(zip(
+        ["segment_id", "direction", "roadway_name", "from_street", "to_street"], SITE_COLUMNS)))
+    sites = raw[SITE_COLUMNS].astype("string").apply(
+        lambda col: col.str.strip().str.upper().str.replace(r"\s+", " ", regex=True))
+    dates = pd.to_datetime(raw["date"], format="mixed", errors="coerce").dt.normalize()
+    hours = pd.to_numeric(raw["hour"], errors="coerce")
+    volumes = pd.to_numeric(raw["volume"], errors="coerce")
+    full_hour = (raw["source"].eq("historical") |
+                 (raw["source"].eq("automated") & pd.to_numeric(raw["intervals"], errors="coerce").eq(4)))
+    valid = (dates.notna() & sites.notna().all(axis=1) & sites.ne("").all(axis=1)
+             & hours.between(0, 23) & hours.mod(1).eq(0) & volumes.ge(0) & full_hour)
+    records = pd.concat([dates.rename("date"), sites, hours.rename("hour"),
+                         volumes.rename("volume")], axis=1).loc[valid]
+    site_hours = records.groupby(["date", *SITE_COLUMNS, "hour"])["volume"].mean()
+    site_days = site_hours.unstack("hour").reindex(columns=range(24)).dropna()
+    if site_days.empty:
+        raise ValueError("No traffic observations with a valid date and 24 complete hourly counts.")
+    exposure = site_days.groupby(level="date").mean()
+    exposure["sites"] = site_days.groupby(level="date").size()
+    site_years = site_days.reset_index()[["date", *SITE_COLUMNS]]
+    site_years["year"] = site_years["date"].dt.year
+    common_sites = site_years.groupby(SITE_COLUMNS)["year"].nunique().eq(site_years.year.nunique()).sum()
+    report = {"input_rows": len(raw), "excluded_rows": int((~valid).sum()),
+              "repeated_site_days": 0,
+              "repeated_site_hours": len(records) - len(site_hours),
+              "incomplete_site_days": len(site_hours.index.droplevel("hour").unique()) - len(site_days),
+              "common_sites": int(common_sites)}
+    return exposure, report
+
+
+def match_traffic(daily, hourly, exposure):
+    """Match calendar dates before calculating exploratory injury/traffic indices."""
+    frame = pd.DataFrame({"injuries": daily})
+    # Complete site-days guarantee all 24 hours, with no implicit missing-as-zero.
+    frame["traffic"] = exposure[list(range(24))].sum(axis=1, min_count=24)
+    frame["sites"] = exposure["sites"]
+    supported = frame["traffic"].gt(0)
+    frame["sites"] = frame["sites"].where(supported)
+    frame["matched_injuries"] = frame["injuries"].where(supported)
+    frame["traffic"] = frame["traffic"].where(supported)
+    if not supported.any():
+        raise ValueError("No overlapping crash dates with positive, complete traffic counts.")
+    daily_baseline = frame["matched_injuries"].sum() / frame["traffic"].sum()
+
+    sampled = exposure.loc[exposure.index.isin(daily.index), list(range(24))].copy()
+    sampled.index.name = "date"
+    sampled.columns.name = "hour"
+    denominator = sampled.stack().rename("traffic").astype(float)
+    matched = denominator.to_frame()
+    matched["injuries"] = hourly.reindex(matched.index, fill_value=0)
+    # A zero denominator is unavailable, never a zero injury rate.
+    matched = matched.loc[matched["traffic"].gt(0)].copy()
+    if matched.empty:
+        raise ValueError("No overlapping date/hour observations with positive traffic counts.")
+    hourly_baseline = matched["injuries"].sum() / matched["traffic"].sum()
+    if daily_baseline <= 0 or hourly_baseline <= 0:
+        raise ValueError("No positive injury baseline on traffic-observed dates.")
+    frame["index"] = frame["matched_injuries"] / frame["traffic"] / daily_baseline
+    return frame, matched, daily_baseline, hourly_baseline
+
+
+def normalize_annual_by_traffic(daily_outcomes, exposure):
+    """Annual outcome/traffic indices using the same observed dates on both sides."""
+    if not daily_outcomes.index.is_unique or not exposure.index.is_unique:
+        raise ValueError("Daily outcomes and traffic must have one row per date.")
+    metrics = ["crashes", "harm_crashes", "injured", "killed"]
+    traffic = exposure[list(range(24))].sum(axis=1, min_count=24)
+    matched = daily_outcomes[metrics].join(traffic.rename("traffic"), how="inner")
+    matched = matched.loc[matched.traffic.gt(0) & matched[metrics].notna().all(axis=1)].copy()
+    if matched.empty:
+        raise ValueError("No overlapping crash dates with positive, complete traffic counts.")
+    matched["sites"] = exposure["sites"].reindex(matched.index)
+    annual = matched[metrics + ["traffic"]].resample("YS").sum(min_count=1)
+    annual["matched_days"] = matched.resample("YS").size()
+    annual["mean_sites"] = matched.sites.resample("YS").mean()
+    annual = annual.loc[annual.matched_days.gt(0)].copy()
+    annual["mean_daily_traffic"] = annual.traffic / annual.matched_days
+    for metric in metrics:
+        baseline = matched[metric].sum() / matched.traffic.sum()
+        annual[f"{metric}_index"] = annual[metric] / annual.traffic / baseline if baseline > 0 else float("nan")
+    annual.index = annual.index.year
+    annual.index.name = "year"
+    return annual
+
+
+def hourly_chart(matched, baseline):
+    """Year slider; each hour uses injuries and exposure from identical dates."""
+    years = sorted(matched.index.get_level_values("date").year.unique())
+    options = [("All sampled years", None)] + [(str(year), year) for year in years]
+    steps, values_by_year, details_by_year = [], [], []
     for label, year in options:
-        selected_days = daily if year is None else daily[daily.index.year == year]
-        selected_hours = hourly if year is None else hourly[hourly.index.get_level_values("date").year == year]
-        totals = selected_hours.groupby(level="hour").sum().reindex(range(24), fill_value=0)
-        values = (totals / len(selected_days)).tolist()
-        averages.append(values)
+        selected = matched if year is None else matched[matched.index.get_level_values("date").year == year]
+        grouped = selected.groupby(level="hour").sum().reindex(range(24))
+        days = selected.groupby(level="hour").size().reindex(range(24), fill_value=0)
+        values = (grouped["injuries"] / grouped["traffic"] / baseline).tolist()
+        details = pd.concat([grouped, days.rename("days")], axis=1).values.tolist()
+        values_by_year.append(values)
+        details_by_year.append(details)
         steps.append(dict(
             label=label, method="update",
-            args=[{"y": [values]}, {"title.text": f"When during the day do injuries happen? · {label}"}],
+            args=[{"y": [values], "customdata": [details]},
+                  {"title.text": f"Within a day · {label}"}],
         ))
-    fig = go.Figure(go.Bar(
-        x=list(range(24)), y=averages[0], marker_color=BLUE,
-        hovertemplate="Hour starting %{x:02d}:00<br>%{y:.2f} people injured per day<extra></extra>",
+    fig = go.Figure(go.Scatter(
+        x=list(range(24)), y=values_by_year[0], customdata=details_by_year[0],
+        mode="lines+markers", line=dict(color=BLUE, width=3), marker=dict(size=6),
+        hovertemplate="Hour starting %{x:02d}:00<br>Adjusted index: %{y:.2f}"
+                      "<br>Citywide injuries: %{customdata[1]:,.0f}"
+                      "<br>Summed mean-site vehicle counts: %{customdata[0]:,.0f}"
+                      "<br>Matched dates: %{customdata[2]}<extra></extra>",
     ))
     fig.update_layout(
-        template="plotly_white", title="When during the day do injuries happen? · All years",
+        template="plotly_white", title="Within a day · All sampled years",
         height=470, margin=dict(t=65, b=115, l=75, r=25),
         xaxis=dict(title="Hour of day (NYC local time)", tickmode="array",
                    tickvals=list(range(0, 24, 2)), ticktext=[f"{hour:02d}:00" for hour in range(0, 24, 2)]),
-        yaxis=dict(title="Average people injured per day<br>within each hour", rangemode="tozero"),
+        yaxis=dict(title="Traffic-adjusted index", range=[0, max(
+            value for values in values_by_year for value in values if pd.notna(value)
+        ) * 1.12], fixedrange=True),
         sliders=[dict(active=0, steps=steps, currentvalue=dict(prefix="Year: "), pad=dict(t=45))],
-        bargap=0.15,
     )
+    fig.add_hline(y=1, line_dash="dash", line_color="#64748b",
+                  annotation_text="Overall baseline", annotation_position="top right")
     return fig
 
 
-def timeline_chart(daily):
-    """Switch aggregation without confusing partial years with full-year totals."""
-    fig = go.Figure()
-    for index, (label, frequency) in enumerate([("Daily", "D"), ("Monthly", "MS"), ("Yearly", "YS")]):
-        groups = daily.resample(frequency)
-        average = groups.mean()
-        days = groups.size()
-        fig.add_trace(go.Scatter(
-            x=average.index, y=average.values, customdata=days.values,
-            name=label, visible=index == 1, mode="lines+markers" if index == 2 else "lines",
-            line=dict(color=BLUE, width=2),
-            hovertemplate="Period starting %{x|%b %d, %Y}<br>%{y:.2f} people injured per day"
-                          "<br>%{customdata} calendar day(s) included<extra></extra>",
-        ))
-    buttons = [dict(label=label, method="update", args=[{"visible": [j == i for j in range(3)]}])
-               for i, label in enumerate(["Daily", "Monthly", "Yearly"])]
+def timeline_chart(frame, baseline):
+    """Annual summaries plus observed-day coverage; no daily interpolation."""
+    groups = frame.resample("YS")
+    annual = pd.DataFrame({
+        "injuries": groups["matched_injuries"].sum(min_count=1),
+        "traffic": groups["traffic"].sum(min_count=1),
+        "days": groups["matched_injuries"].count(),
+        "sites": groups["sites"].mean(),
+    })
+    # Keep gaps for wholly unsupported years inside the observed traffic period,
+    # but do not stretch the chart into later years with no traffic information.
+    observed = annual.loc[annual["days"].gt(0)].index
+    annual = annual.loc[observed.min():observed.max()]
+    values = annual["injuries"] / annual["traffic"] / baseline
+    years = annual.index.year.tolist()
+    fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                        row_heights=[0.76, 0.24], vertical_spacing=0.08)
+    fig.add_trace(go.Scatter(
+        x=years, y=values, customdata=annual.values.tolist(),
+        mode="lines+markers", connectgaps=False,
+        line=dict(color=BLUE, width=3), marker=dict(size=9),
+        hovertemplate="Year %{x:.0f}<br>Adjusted index: %{y:.2f}"
+                      "<br>Injuries on sampled dates: %{customdata[0]:,.0f}"
+                      "<br>Summed mean-site traffic: %{customdata[1]:,.0f}"
+                      "<br>Sampled dates: %{customdata[2]:.0f}"
+                      "<br>Mean locations/day: %{customdata[3]:.1f}<extra></extra>",
+    ), row=1, col=1)
+    fig.add_trace(go.Bar(
+        x=years, y=annual["days"], marker_color="#94a3b8",
+        text=annual["days"], textposition="outside", cliponaxis=False,
+        hovertemplate="%{x:.0f}: %{y} sampled dates<extra></extra>",
+    ), row=2, col=1)
+    fig.add_hline(y=1, line_dash="dash", line_color="#64748b", row=1, col=1,
+                  annotation_text="Overall baseline", annotation_position="top right")
     fig.update_layout(
-        template="plotly_white", title="How have traffic injuries changed over time?",
-        height=490, margin=dict(t=100, b=65, l=75, r=25), showlegend=False,
-        yaxis=dict(title="People injured per day<br>(period average)", rangemode="tozero"),
-        xaxis=dict(
-            title="Date — drag the handles below to focus on a period", type="date",
-            rangeslider=dict(visible=True, thickness=0.17),
-            rangeselector=dict(buttons=[
-                dict(count=1, label="1 year", step="year", stepmode="backward"),
-                dict(count=5, label="5 years", step="year", stepmode="backward"),
-                dict(label="All", step="all"),
-            ]),
-        ),
-        updatemenus=[dict(type="dropdown", active=1, buttons=buttons, x=1, xanchor="right", y=1.21)],
+        template="plotly_white", title="Across years · One summary per year",
+        height=570, margin=dict(t=65, b=55, l=75, r=25), showlegend=False,
+        hovermode="x unified", bargap=0.55,
     )
+    fig.update_yaxes(title_text="Traffic-adjusted index", rangemode="tozero", row=1, col=1)
+    fig.update_yaxes(title_text="Sampled<br>dates", rangemode="tozero", showgrid=False,
+                     range=[0, annual["days"].max() * 1.4], fixedrange=True, row=2, col=1)
+    fig.update_xaxes(type="linear", dtick=1, tickformat="d",
+                     range=[min(years) - 0.4, max(years) + 0.4])
+    fig.update_xaxes(title_text="Year — drag the range slider to zoom",
+                     rangeslider=dict(visible=True, thickness=0.10), row=2, col=1)
     return fig
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, default=ROOT / "data/motor_vehicle_collisions.csv")
+    parser.add_argument("--traffic", type=Path, default=TRAFFIC_FILE)
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
     daily, hourly, excluded = load_patterns(args.input)
+    exposure, traffic_report = load_traffic(args.traffic)
+    frame, matched, daily_baseline, hourly_baseline = match_traffic(daily, hourly, exposure)
+    supported = frame["traffic"].dropna().index
     config = {"responsive": True, "displaylogo": False, "toImageButtonOptions": {"scale": 2}}
-    hour_html = hourly_chart(daily, hourly).to_html(full_html=False, include_plotlyjs=True, config=config)
-    trend_html = timeline_chart(daily).to_html(full_html=False, include_plotlyjs=False, config=config)
+    hour_html = hourly_chart(matched, hourly_baseline).to_html(
+        full_html=False, include_plotlyjs=True, config=config)
+    trend_html = timeline_chart(frame, daily_baseline).to_html(
+        full_html=False, include_plotlyjs=False, config=config)
     html = f"""<!doctype html>
     <html lang="en"><head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>NYC Traffic Injury Time Patterns</title>
+    <title>Traffic-Adjusted NYC Injury Patterns</title>
     <style>
       body {{margin:0;background:#f1f5f9;color:#0f172a;font:16px/1.6 Arial,sans-serif}}
       main {{max-width:1150px;margin:auto;padding:24px}}
       section {{background:white;border-radius:10px;padding:12px;margin:20px 0}}
       h1 {{margin:0}} p {{margin:8px 0;color:#475569}} footer {{font-size:13px}}
+      .method {{background:#fff7ed;padding:14px 18px;border-left:4px solid #ea580c}}
     </style></head><body><main>
-    <h1>NYC Traffic Injury Time Patterns</h1>
-    <p>{daily.index.min():%b %d, %Y} – {daily.index.max():%b %d, %Y}
-       · {int(daily.sum()):,} recorded people injured</p>
-    <section><p>Drag the <b>year slider</b> to compare the 24-hour pattern across years.</p>{hour_html}</section>
-    <section><p>Drag the <b>date-range handles</b> below the timeline. Use the dropdown to
-      switch between daily, monthly, and yearly views. These controls affect this chart only.</p>{trend_html}</section>
-    <footer>Daily averages use calendar days within the dataset date range, including days with
-      no recorded injuries as zero. First and last periods may be partial; hover to see days included.
-      Monthly and yearly values are averages per day, not totals. These charts describe reported injury
-      burden, not risk per trip.<br>
-      Excluded: {excluded['dates']:,} records with invalid dates;
+    <h1>NYC Injury Patterns, Adjusted for Traffic</h1>
+    <p>Two views: the pattern within a day, and the comparison across years.</p>
+    <p class="method"><b>How to read the index:</b> 1 = overall baseline;
+      2 = twice the injury-to-traffic ratio. This is a sample-based comparison, not a per-vehicle injury rate.</p>
+    <section><p>Each point summarizes one hour. Drag the <b>year slider</b> to compare years.
+      The vertical scale stays fixed so the comparison is consistent.</p>{hour_html}</section>
+    <section><p>Each point summarizes a year using its available traffic-observed dates.
+      The bars underneath show how many dates support each point.
+      Drag the <b>range slider</b> to focus on particular years.</p>{trend_html}</section>
+    <p>{len(supported):,} matched dates from {supported.min():%b %d, %Y} to {supported.max():%b %d, %Y}.
+      Traffic-adjusted charts end there; later injury data have no matching traffic counts.
+      Lines join hourly or yearly summaries, not estimates for unsampled days.</p>
+    <section><details><summary><b>Method and data limitations</b></summary>
+      <ol><li>Keep traffic observations with a valid location, date, and all 24 hourly counts.
+        Repeated observations for the same location/date are averaged.</li>
+      <li>For each date/hour, average vehicle counts across sampled locations.
+        This avoids treating more counters as more traffic.</li>
+      <li>Use citywide injuries on the same observed dates/hours. Divide summed injuries by
+        summed mean-location vehicle counts, then divide by the pooled ratio to create an index.</li>
+      <li>Yearly values are ratios of matched sums, not averages of daily ratios.
+        Unsampled days are omitted from both sums; no traffic counts are interpolated.</li></ol>
+      <p>The hourly and timeline views each use their pooled matched-observation baseline.
+        The hourly view excludes invalid crash times; the timeline includes all dated injury counts.
+        Zero traffic denominators are unavailable. Raw injury counts and sampled-location coverage
+        appear on hover.</p>
+      <p><b>Interpretation limit:</b> averaging locations adjusts for the number of counters, but
+        does not make the changing road sample representative of NYC.
+        {traffic_report['common_sites']:,} locations are observed in every traffic year in this file.
+        A defensible citywide injury rate needs
+        citywide exposure estimates or injuries matched to the actual counted road segments.
+        Comparisons can also reflect changing sampled roads and seasons.</p>
+    </details></section>
+    <footer>Traffic cleaning: {traffic_report['excluded_rows']:,} of {traffic_report['input_rows']:,}
+      rows excluded; {traffic_report['repeated_site_days']:,} repeated location/date observations averaged.<br>
+      Crash exclusions: {excluded['dates']:,} invalid dates;
       {excluded['injuries']:,} dated records with missing/invalid injury counts.
-      The hourly chart additionally excludes {excluded['times']:,} records with invalid times.<br>
-      Source: City of New York, Motor Vehicle Collisions – Crashes.</footer>
-    </main></body></html>"""
+      The hourly chart additionally excludes {excluded['times']:,} invalid crash times.<br>
+      Partial site-days excluded: {traffic_report.get('incomplete_site_days', 0):,};
+      repeated site-hour observations averaged: {traffic_report.get('repeated_site_hours', 0):,}.<br>
+      Traffic input: {args.traffic.name}. Automated hours require four quarter-hour intervals.<br>
+      Sources: City of New York, Motor Vehicle Collisions – Crashes;
+      <a href="{TRAFFIC_SOURCE}">Combined Traffic Volume Counts (hourly)</a>.
+    </footer></main></body></html>"""
     output = ROOT / "outputs/time_patterns.html"
     output.parent.mkdir(exist_ok=True)
     output.write_text(html, encoding="utf-8")
+    frame.index.name = "date"
+    frame.to_csv(output.with_name("time_normalization.csv"))
     print(f"Saved {output}")
+    print(f"Normalized {len(supported):,} matched dates; unsupported dates remain missing.")
     if not args.no_open:
         webbrowser.open(output.resolve().as_uri())
 

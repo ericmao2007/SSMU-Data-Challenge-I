@@ -1,0 +1,43 @@
+{
+  "repository": "https://github.com/ericmao2007/SSMU-Data-Challenge-I",
+  "commit": "f92bea87dff7ee7a57e41b4af85535f571d1f5a1",
+  "checked_on": "2026-10-17",
+  "python": "3.14.6",
+  "pandas": "3.0.6",
+  "statsmodels": "0.15.0",
+  "files": [
+    {
+      "path": "data/other/Combined_Traffic_Volume_Counts_hourly.zip",
+      "url": "https://raw.githubusercontent.com/ericmao2007/SSMU-Data-Challenge-I/f92bea87dff7ee7a57e41b4af85535f571d1f5a1/data/other/Combined_Traffic_Volume_Counts_hourly.zip",
+      "git_blob": "b4d8087675f8c0a2816a5e82a2d24b7e0f10fb4f",
+      "sha256": "851259c3f0dabee613ed9ee8c5325bb3ee2f7c59651042ea1062072248456a43",
+      "extracted": [
+        "data/other/Combined_Traffic_Volume_Counts_hourly.csv"
+      ]
+    },
+    {
+      "path": "data/motor_vehicle_collisions.zip",
+      "url": "https://raw.githubusercontent.com/ericmao2007/SSMU-Data-Challenge-I/f92bea87dff7ee7a57e41b4af85535f571d1f5a1/data/motor_vehicle_collisions.zip",
+      "git_blob": "f2dccb6531a04f13251f024a11d99298e3346139",
+      "sha256": "940d57ffebc7331e2b9479011f42e358bfbfbf54aa1e63c3451269aa65c0c7d9",
+      "extracted": [
+        "data/motor_vehicle_collisions.csv"
+      ]
+    },
+    {
+      "path": "data/other/NYC_Street_Geospatial.zip",
+      "url": "https://raw.githubusercontent.com/ericmao2007/SSMU-Data-Challenge-I/f92bea87dff7ee7a57e41b4af85535f571d1f5a1/data/other/NYC_Street_Geospatial.zip",
+      "git_blob": "22dc4e7c1ca429428cc60a3c1ecd53fb804ce188",
+      "sha256": "07386bfc43b73619f986ba223effe990aa1fa9cb216c2627a0491eaa586cc69c",
+      "extracted": [
+        "data/other/NYC_Street_Geospatial.csv"
+      ]
+    },
+    {
+      "path": "data/other/Combined_Traffic_Volume_Counts_hourly.csv",
+      "url": "https://github.com/ericmao2007/SSMU-Data-Challenge-I/blob/f92bea87dff7ee7a57e41b4af85535f571d1f5a1/data/other/Combined_Traffic_Volume_Counts_hourly.zip",
+      "sha256": "8438a2f92b6655fdffe4e7b9ac6c22b820d0839bc350e9e8165db151ee5d1aad",
+      "note": "Combined historical/automated hourly counts; complete location-days; sample-based indices."
+    }
+  ]
+}

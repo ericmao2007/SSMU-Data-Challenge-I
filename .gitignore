@@ -2,3 +2,7 @@
 __pycache__/
 *.py[cod]
 data/motor_vehicle_collisions.csv
+.venv/
+.ipynb_checkpoints/
+data/other/*.csv
+*.csv

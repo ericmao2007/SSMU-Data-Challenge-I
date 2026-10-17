@@ -1,0 +1,12 @@
+{
+  "Archive hashes verified": true,
+  "Collision IDs unique": true,
+  "Street join did not multiply crashes": true,
+  "Daily/monthly/borough/road totals reconcile": true,
+  "Unknown outcomes and roads remain explicit": true,
+  "Monthly policy models exclude partial months": true,
+  "Camera main comparison has 12 full months per period": true,
+  "Combined traffic and outcomes use matching observed dates": true,
+  "Traffic-weighted pooled outcome indices equal one": true,
+  "Notebook and interpretations executed from source data": true
+}

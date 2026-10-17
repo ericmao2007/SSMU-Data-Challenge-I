@@ -1,0 +1,10 @@
+{
+  "raw_crashes": 2269187,
+  "invalid_dates": 0,
+  "missing_time": 0,
+  "unknown_harm_status": 8919,
+  "street_matched": 1181479,
+  "street_eligible": 1577812,
+  "ambiguous_speed_matches": 634572,
+  "unknown_borough": 691375
+}
