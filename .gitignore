@@ -1,0 +1,4 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+data/motor_vehicle_collisions.csv
