@@ -10,3 +10,6 @@ data/other/*.csv
 !outputs/event_analysis/*.csv
 !outputs/covid_reporting_analysis/*.csv
 !outputs/crash_timelapse/*.csv
+
+# Local regenerable graph cache
+/graft/

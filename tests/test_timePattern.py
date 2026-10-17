@@ -35,25 +35,6 @@ class TrafficNormalizationTests(unittest.TestCase):
         self.assertEqual(report["incomplete_site_days"], 1)
         self.assertEqual(report["repeated_site_hours"], 1)
 
-    def test_duplicate_observations_are_averaged_before_sites(self):
-        records = []
-        for site, count in [(1, "100"), (1, "300"), (2, "400"), (3, "1,000")]:
-            records.append({
-                "SegmentID": site, "Direction": "NB", "Roadway Name": "MAIN ST",
-                "From": "FIRST ST", "To": "SECOND ST", "Date": "01/01/2020",
-                **dict.fromkeys(patterns.HOUR_COLUMNS, count),
-            })
-        # A partial day must not change the road sample only for some hours.
-        records.append({**records[-1], "SegmentID": 4, patterns.HOUR_COLUMNS[-1]: None})
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "traffic.csv"
-            pd.DataFrame(records).to_csv(path, index=False)
-            exposure, report = patterns.load_traffic(path)
-        self.assertAlmostEqual(exposure.iloc[0, 0], (200 + 400 + 1000) / 3)
-        self.assertEqual(exposure.iloc[0]["sites"], 3)
-        self.assertEqual(report["excluded_rows"], 1)
-        self.assertEqual(report["repeated_site_days"], 1)
-
     def sample_data(self):
         dates = pd.to_datetime(["2020-01-01", "2020-01-02", "2020-02-01", "2021-01-01"])
         # Large injuries on an unobserved date must not leak into normalization.

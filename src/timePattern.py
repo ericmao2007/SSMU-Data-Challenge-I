@@ -21,14 +21,6 @@ TRAFFIC_COMMIT = "f92bea87dff7ee7a57e41b4af85535f571d1f5a1"
 TRAFFIC_SOURCE = ("https://github.com/ericmao2007/SSMU-Data-Challenge-I/blob/"
                   f"{TRAFFIC_COMMIT}/data/other/Combined_Traffic_Volume_Counts_hourly.zip")
 SITE_COLUMNS = ["SegmentID", "Direction", "Roadway Name", "From", "To"]
-HOUR_COLUMNS = [
-    "12:00-1:00 AM", "1:00-2:00AM", "2:00-3:00AM", "3:00-4:00AM",
-    "4:00-5:00AM", "5:00-6:00AM", "6:00-7:00AM", "7:00-8:00AM",
-    "8:00-9:00AM", "9:00-10:00AM", "10:00-11:00AM", "11:00-12:00PM",
-    "12:00-1:00PM", "1:00-2:00PM", "2:00-3:00PM", "3:00-4:00PM",
-    "4:00-5:00PM", "5:00-6:00PM", "6:00-7:00PM", "7:00-8:00PM",
-    "8:00-9:00PM", "9:00-10:00PM", "10:00-11:00PM", "11:00-12:00AM",
-]
 
 
 def load_patterns(csv_path):
@@ -62,50 +54,16 @@ def load_patterns(csv_path):
 
 
 def load_traffic(csv_path):
-    """Average complete traffic observations per sampled location, not total sensors.
+    """Convert long hourly counts to complete site-days, then average sites per date.
 
-    A location is a segment/direction/street-endpoints combination. Repeated
-    observations of that location on one date are averaged before averaging
-    locations. Require all 24 counts so the sampled sites are consistent within
-    each day. This does not correct changing site composition between days.
-    """
-    columns = pd.read_csv(csv_path, nrows=0).columns
-    if {"date", "hour", "volume", "segment_id"}.issubset(columns):
-        return load_combined_traffic(csv_path)
-    raw = pd.read_csv(csv_path, dtype={"SegmentID": "string"})
-    dates = pd.to_datetime(raw["Date"], format="mixed", errors="coerce").dt.normalize()
-    volumes = raw[HOUR_COLUMNS].apply(
-        lambda column: pd.to_numeric(
-            column.astype("string").str.replace(",", "", regex=False).str.strip(), errors="coerce"
-        )
-    )
-    sites = raw[SITE_COLUMNS].astype("string").apply(
-        lambda column: column.str.strip().str.upper().str.replace(r"\s+", " ", regex=True)
-    )
-    valid = (dates.notna() & sites.notna().all(axis=1) & sites.ne("").all(axis=1)
-             & volumes.notna().all(axis=1) & volumes.ge(0).all(axis=1))
-    records = pd.concat([dates.rename("date"), sites, volumes], axis=1).loc[valid]
-    site_days = records.groupby(["date", *SITE_COLUMNS])[HOUR_COLUMNS].mean()
-    exposure = site_days.groupby(level="date").mean()
-    exposure.columns = range(24)
-    exposure["sites"] = site_days.groupby(level="date").size()
-    if exposure.empty:
-        raise ValueError("No traffic observations with a valid date and 24 complete hourly counts.")
-    site_years = site_days.reset_index()[["date", *SITE_COLUMNS]]
-    site_years["year"] = site_years["date"].dt.year
-    years_per_site = site_years.groupby(SITE_COLUMNS)["year"].nunique()
-    common_sites = int(years_per_site.eq(site_years["year"].nunique()).sum())
-    report = {"input_rows": len(raw), "excluded_rows": int((~valid).sum()),
-              "repeated_site_days": len(records) - len(site_days), "common_sites": common_sites}
-    return exposure, report
-
-
-def load_combined_traffic(csv_path):
-    """Convert long hourly counts to complete site-days before averaging sites.
-
-    Automated hours require all four quarter-hour intervals. Historical rows
-    already represent hours. Never add hist_volume to volume: it is a reference
-    field for overlapping sources, not additional traffic.
+    A location is a segment/direction/street-endpoints combination, so the
+    result is per sampled location, not total sensors. Automated hours require
+    all four quarter-hour intervals; historical rows already represent hours.
+    Repeated observations of a location/hour are averaged, and only
+    location-days with all 24 hours are kept so the sampled sites are
+    consistent within each day. This does not correct changing site
+    composition between days. Never add hist_volume to volume: it is a
+    reference field for overlapping sources, not additional traffic.
     """
     raw = pd.read_csv(csv_path, dtype={"segment_id": "string"}, usecols=[
         "source", "segment_id", "direction", "roadway_name", "from_street",
@@ -134,7 +92,6 @@ def load_combined_traffic(csv_path):
     site_years["year"] = site_years["date"].dt.year
     common_sites = site_years.groupby(SITE_COLUMNS)["year"].nunique().eq(site_years.year.nunique()).sum()
     report = {"input_rows": len(raw), "excluded_rows": int((~valid).sum()),
-              "repeated_site_days": 0,
               "repeated_site_hours": len(records) - len(site_hours),
               "incomplete_site_days": len(site_hours.index.droplevel("hour").unique()) - len(site_days),
               "common_sites": int(common_sites)}
@@ -326,7 +283,7 @@ def main():
       Lines join hourly or yearly summaries, not estimates for unsampled days.</p>
     <section><details><summary><b>Method and data limitations</b></summary>
       <ol><li>Keep traffic observations with a valid location, date, and all 24 hourly counts.
-        Repeated observations for the same location/date are averaged.</li>
+        Repeated observations for the same location/hour are averaged.</li>
       <li>For each date/hour, average vehicle counts across sampled locations.
         This avoids treating more counters as more traffic.</li>
       <li>Use citywide injuries on the same observed dates/hours. Divide summed injuries by
@@ -345,12 +302,12 @@ def main():
         Comparisons can also reflect changing sampled roads and seasons.</p>
     </details></section>
     <footer>Traffic cleaning: {traffic_report['excluded_rows']:,} of {traffic_report['input_rows']:,}
-      rows excluded; {traffic_report['repeated_site_days']:,} repeated location/date observations averaged.<br>
+      rows excluded.<br>
       Crash exclusions: {excluded['dates']:,} invalid dates;
       {excluded['injuries']:,} dated records with missing/invalid injury counts.
       The hourly chart additionally excludes {excluded['times']:,} invalid crash times.<br>
-      Partial site-days excluded: {traffic_report.get('incomplete_site_days', 0):,};
-      repeated site-hour observations averaged: {traffic_report.get('repeated_site_hours', 0):,}.<br>
+      Partial site-days excluded: {traffic_report['incomplete_site_days']:,};
+      repeated site-hour observations averaged: {traffic_report['repeated_site_hours']:,}.<br>
       Traffic input: {args.traffic.name}. Automated hours require four quarter-hour intervals.<br>
       Sources: City of New York, Motor Vehicle Collisions – Crashes;
       <a href="{TRAFFIC_SOURCE}">Combined Traffic Volume Counts (hourly)</a>.

@@ -28,7 +28,7 @@ The study separates reported crashes from injuries and deaths, accounts for inco
 
 Both `src/timePattern.py` and the COVID notebook use `data/other/Combined_Traffic_Volume_Counts_hourly.csv` for normalization. Automated hours require four quarter-hour intervals; only complete location-days are retained. Repeated site-hours are averaged before averaging across locations. Outcomes and denominators use the same observed dates. Annual indices use ratios of sums divided by their pooled baseline (1), with matched-date coverage shown explicitly.
 
-These are sample-based traffic-adjusted indices, not citywide per-mile or per-vehicle risks: sampled roads and dates change. The COVID comparison exports `annual_crashes_normalized_by_traffic.csv` and `covid_raw_vs_traffic_adjusted_changes.csv`. Previous VMT outputs are retained as older artifacts and are not inputs to the current analysis. `nyc_policy_analysis_normalized.ipynb` is an executed copy of the same notebook.
+These are sample-based traffic-adjusted indices, not citywide per-mile or per-vehicle risks: sampled roads and dates change. The COVID comparison exports `annual_crashes_normalized_by_traffic.csv` and `covid_raw_vs_traffic_adjusted_changes.csv`.
 
 ## Separate concert and crash pilot
 
