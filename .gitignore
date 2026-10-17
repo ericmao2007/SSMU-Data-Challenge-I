@@ -6,3 +6,6 @@ data/motor_vehicle_collisions.csv
 .ipynb_checkpoints/
 data/other/*.csv
 *.csv
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

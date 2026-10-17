@@ -11,9 +11,9 @@
 
 # %% [markdown]
 # ## 1. Setup and reproducible file locations
-# Install dependencies once with `%pip install -r ../requirements-analysis.txt` when the notebook is opened from the notebooks folder (use `requirements-analysis.txt` from the repository root), then restart the kernel. This includes `openpyxl`, needed to read the official NYSDOT workbook.
+# Install dependencies once with `%pip install -r ../requirements-analysis.txt` when the notebook is opened from the notebooks folder (use `requirements-analysis.txt` from the repository root), then restart the kernel.
 #
-# We use pandas for data preparation, Matplotlib for presentation figures, and statsmodels for transparent count regressions. Fixed random seeds make any resampling reproducible. No raw crash records are printed.
+# We use pandas for data preparation, Matplotlib for presentation figures, and statsmodels for transparent count regressions. No raw crash records are printed.
 
 # %%
 from pathlib import Path
@@ -21,10 +21,8 @@ from zipfile import ZipFile
 from urllib.request import urlretrieve
 import hashlib
 import json
-import re
 import sys
 import platform
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -33,7 +31,6 @@ import matplotlib.dates as mdates
 import matplotlib.ticker as mticker
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
-from scipy.stats import norm
 from IPython.display import display, Markdown
 from IPython import get_ipython
 
@@ -46,7 +43,6 @@ OUT = ROOT / 'outputs/policy_analysis'
 PROCESSED = DATA / 'processed'
 OUT.mkdir(parents=True, exist_ok=True)
 PROCESSED.mkdir(parents=True, exist_ok=True)
-RNG = np.random.default_rng(20261017)
 plt.rcParams.update({'figure.dpi': 120, 'savefig.dpi': 200, 'font.size': 10,
                      'axes.spines.top': False, 'axes.spines.right': False,
                      'axes.titleweight': 'bold', 'axes.grid': True, 'grid.alpha': 0.15})
@@ -114,7 +110,7 @@ display(pd.DataFrame(manifest['files'])[['path', 'git_blob', 'extracted']])
 
 # %% [markdown]
 # ## 3. A policy calendar, including changes to the measurement system
-# Dates are verified against primary government sources, not inferred from the crash graph. The policy table is exported and later joined to the time series.
+# Dates are verified against primary government sources, not inferred from the crash graph. The policy table is exported to `data/processed/policy_calendar.csv`; figures mark the key dates.
 #
 # - [Vision Zero announcement, January 15, 2014](https://www.nyc.gov/site/dcas/about/press-releases/jan-15-2014-press-release.page): a package of measures, not a single instantaneous treatment.
 # - [Default limit reduced to 25 mph, November 7, 2014](https://www.nyc.gov/html/dot/html/pr2014/pr14-085.shtml).
@@ -228,7 +224,6 @@ for chunk in pd.read_csv(DATA / 'motor_vehicle_collisions.csv', usecols=usecols,
     known = chunk['injured'].notna() & chunk['killed'].notna()
     chunk['harm_crashes'] = (chunk['injured'].gt(0) | chunk['killed'].gt(0)).astype(float).where(known)
     chunk['non_harm_crashes'] = (chunk['injured'].eq(0) & chunk['killed'].eq(0)).astype(float).where(known)
-    chunk['fatal_crashes'] = chunk['killed'].gt(0).astype(float).where(chunk['killed'].notna())
     chunk['crashes'] = 1
     chunk['known_harm'] = known.astype(int)
     chunk['known_injured'] = chunk.injured.notna().astype(int)
@@ -238,7 +233,7 @@ for chunk in pd.read_csv(DATA / 'motor_vehicle_collisions.csv', usecols=usecols,
     audit['missing_time'] += int(chunk.hour.isna().sum())
     weekend = chunk.date.dt.dayofweek.ge(5)
     chunk['new_hours'] = (weekend | chunk.hour.lt(6) | chunk.hour.ge(22)).astype(int)
-    measures = ['crashes', 'harm_crashes', 'non_harm_crashes', 'fatal_crashes', 'known_harm',
+    measures = ['crashes', 'harm_crashes', 'non_harm_crashes', 'known_harm',
                 'known_injured', 'known_killed', *OUTCOME_COLUMNS.values()]
     parts.append(chunk.groupby('date')[measures].sum(min_count=1))
     by_borough.append(chunk.groupby(['date', 'borough'])[measures].sum(min_count=1))
@@ -246,9 +241,10 @@ for chunk in pd.read_csv(DATA / 'motor_vehicle_collisions.csv', usecols=usecols,
     chunk['month'] = chunk.date.dt.to_period('M').dt.to_timestamp()
     # Preserve unknown and ambiguous inventory classifications instead of guessing a segment.
     chunk['road_context'] = np.select(
-        [chunk.inventory_speed.isna(), chunk.speed_values.gt(1), chunk.inventory_speed.le(25),
-         chunk.inventory_speed.le(35)],
-        ['Unmatched', 'Mixed inventory speeds', 'Inventory speed 25 or lower', 'Inventory speed 26–35'],
+        [chunk.inventory_segments.isna(), chunk.inventory_speed.isna(), chunk.speed_values.gt(1),
+         chunk.inventory_speed.le(25), chunk.inventory_speed.le(35)],
+        ['Unmatched', 'Matched, no speed value', 'Mixed inventory speeds', 'Inventory speed 25 or lower',
+         'Inventory speed 26–35'],
         default='Inventory speed above 35')
     by_road.append(chunk.groupby(['month', 'road_context'])[measures].sum(min_count=1))
 
@@ -258,11 +254,7 @@ assert daily.crashes.sum() == audit['raw_crashes'] - audit['invalid_dates']
 assert (daily.harm_crashes.fillna(0) + daily.non_harm_crashes.fillna(0) == daily.known_harm).all()
 first_date, last_date = daily.index.min(), daily.index.max()
 assert len(daily) == len(pd.date_range(first_date, last_date)), 'Missing entire crash dates need review.'
-for label, date in [('vision_zero', '2014-01-15'), ('speed_25', '2014-11-07'),
-                    ('pause', '2020-03-22'), ('reporting_change', '2020-04-06'),
-                    ('camera_24h', '2022-08-01'), ('congestion', '2025-01-05')]:
-    daily[f'after_{label}'] = (daily.index >= date).astype(int)
-monthly = daily[measures].resample('MS').sum(min_count=1)
+monthly = daily.resample('MS').sum(min_count=1)
 monthly['observed_days'] = daily['crashes'].resample('MS').size()
 monthly['calendar_days'] = monthly.index.days_in_month
 monthly['complete_month'] = monthly.observed_days.eq(monthly.calendar_days)
@@ -333,7 +325,9 @@ display(annual.loc[annual.complete_year, ['crashes', 'harm_crashes', 'injured', 
 # Automated hours require all four quarter-hour intervals; historical rows already contain hourly volumes. Average repeated observations of the same location/hour, then retain only location-days with all 24 hours. Average counts across locations for each date/hour so adding more counters does not mechanically increase the denominator. `hist_volume` is an overlap reference, not extra traffic to add.
 #
 # ### 7b. Calculate annual ratios using matching dates
-# For each year: **sum of citywide outcomes on sampled dates / sum of mean-location daily traffic on those same dates**, divided by the pooled ratio over all matched dates. An index of 1 is the pooled baseline. Unsampled dates and zero denominators are omitted; nothing is interpolated. The 2019–2020 comparison uses each year's observed dates, which can differ in road and seasonal composition. Raw counts below also use these matched dates. No causal conclusion follows from the index.
+# For each year: **sum of citywide outcomes on sampled dates / sum of mean-location daily traffic on those same dates**, divided by the pooled ratio over all matched dates. An index of 1 is the pooled baseline. Unsampled dates and zero denominators are omitted; nothing is interpolated. Raw counts below are averaged **per matched date**, because the two years have different numbers of sampled dates.
+
+The 2019–2020 comparison uses each year's observed dates, which differ in road and seasonal composition. 2020 has no complete traffic location-days in some lockdown months, so the comparison does not describe those months. A sensitivity check restricts both years to calendar months observed in both. No causal conclusion follows from the index.
 
 # %%
 sys.path.insert(0, str(ROOT))
@@ -343,28 +337,46 @@ covid_rates = normalize_annual_by_traffic(daily, traffic_exposure)
 covid_rates.to_csv(PROCESSED / 'annual_crashes_normalized_by_traffic.csv')
 metrics = ['crashes', 'harm_crashes', 'injured', 'killed']
 pretty = ['All reported crashes*', 'Harm crashes', 'People injured', 'People killed']
-raw_changes = (covid_rates.loc[2020, metrics] / covid_rates.loc[2019, metrics] - 1) * 100
 rate_columns = [f'{metric}_index' for metric in metrics]
-changes = pd.Series((covid_rates.loc[2020, rate_columns].to_numpy(dtype=float) /
-                     covid_rates.loc[2019, rate_columns].to_numpy(dtype=float) - 1) * 100, index=metrics)
+
+def index_change(rates, year, base=2019):
+    return pd.Series((rates.loc[year, rate_columns].to_numpy(dtype=float) /
+                      rates.loc[base, rate_columns].to_numpy(dtype=float) - 1) * 100, index=metrics)
+
+# Sum over different numbers of sampled dates is not comparable; use per-date means.
+per_matched_day = covid_rates[metrics].div(covid_rates.matched_days, axis=0)
+raw_changes = (per_matched_day.loc[2020] / per_matched_day.loc[2019] - 1) * 100
+changes = index_change(covid_rates, 2020)
 traffic_change = (covid_rates.loc[2020, 'mean_daily_traffic'] /
                   covid_rates.loc[2019, 'mean_daily_traffic'] - 1) * 100
-covid_comparison = pd.DataFrame({'matched_date_count_change_percent': raw_changes,
-                                 'traffic_adjusted_index_change_percent': changes})
+# Seasonal sensitivity: keep only calendar months with traffic observations in both years.
+traffic_dates = traffic_exposure.index[traffic_exposure[list(range(24))].sum(axis=1, min_count=24).gt(0)]
+traffic_months = {year: set(traffic_dates[traffic_dates.year == year].month) for year in [2019, 2020]}
+shared_months = sorted(traffic_months[2019] & traffic_months[2020])
+missing_2020_months = sorted(set(range(1, 13)) - traffic_months[2020])
+same_month_days = daily.loc[daily.index.year.isin([2019, 2020]) & daily.index.month.isin(shared_months)]
+same_month_rates = normalize_annual_by_traffic(same_month_days, traffic_exposure)
+same_month_changes = index_change(same_month_rates, 2020)
+covid_comparison = pd.DataFrame({'per_matched_date_count_change_percent': raw_changes,
+                                 'traffic_adjusted_index_change_percent': changes,
+                                 'same_month_traffic_adjusted_index_change_percent': same_month_changes})
 covid_comparison.to_csv(OUT / 'covid_raw_vs_traffic_adjusted_changes.csv')
-fig, ax = plt.subplots(figsize=(11, 5))
+fig, ax = plt.subplots(figsize=(11, 5.5))
 positions = np.arange(len(metrics))
-ax.barh(positions - .18, raw_changes, height=.33, color='#94a3b8', label='Raw counts on matched dates')
-ax.barh(positions + .18, changes, height=.33, color=BLUE, label='Traffic-adjusted index')
-ax.axvline(0, color='#475569', linewidth=1)
-for values, shift in [(raw_changes, -.18), (changes, .18)]:
+bars = [(raw_changes, -.27, '#94a3b8', 'Raw counts per matched date'),
+        (changes, 0, BLUE, 'Traffic-adjusted index: all matched dates'),
+        (same_month_changes, .27, '#93c5fd', 'Traffic-adjusted index: months sampled in both years')]
+for values, shift, color, label in bars:
+    ax.barh(positions + shift, values, height=.25, color=color, label=label)
     for position, value in enumerate(values):
         ax.text(value + (1 if value >= 0 else -1), position + shift, f'{value:+.1f}%',
                 va='center', ha='left' if value >= 0 else 'right', fontsize=9)
+ax.axvline(0, color='#475569', linewidth=1)
 ax.set(yticks=positions, yticklabels=pretty, xlabel='2020 change relative to 2019 (%)',
        title='COVID: outcomes relative to sampled traffic volume')
 ax.invert_yaxis()
-ax.set_xlim(min(-60, raw_changes.min()-15, changes.min()-15), max(55, changes.max()+15, raw_changes.max()+15))
+all_values = pd.concat([raw_changes, changes, same_month_changes])
+ax.set_xlim(min(-60, all_values.min() - 15), max(55, all_values.max() + 15))
 ax.legend(loc='best')
 fig.text(.5, .01, '*April 2020 reporting change affects all-crash counts. '
          'Changing sampled roads/dates limit comparison; this is not a per-mile risk.', ha='center', fontsize=8)
@@ -373,12 +385,17 @@ save_figure(fig, '02_covid_traffic_adjusted_changes')
 display(covid_rates.loc[[2019, 2020, 2021], ['matched_days', 'mean_sites', 'mean_daily_traffic', *metrics, *rate_columns]].round(3))
 display(covid_comparison.round(2))
 fatal_ratio = covid_rates.loc[2020, 'killed_index'] / covid_rates.loc[2019, 'killed_index']
+month_names = lambda months: ', '.join(pd.Timestamp(2020, month, 1).strftime('%b') for month in months) or 'none'
 note(f"**Traffic-adjusted COVID comparison (2020 vs 2019):** mean sampled-location traffic per observed "
      f"day changed {traffic_change:+.1f}%. There were {int(covid_rates.loc[2019, 'matched_days'])} matched "
-     f"dates in 2019 and {int(covid_rates.loc[2020, 'matched_days'])} in 2020. The harm-crash index changed "
-     f"{changes['harm_crashes']:+.1f}% and the fatality index changed {changes['killed']:+.1f}%. "
-     "These are descriptive sample-based indices. Changing roads, dates, travel mix, and reporting "
-     "can affect the comparison; they do not isolate the effect of lockdown policy.")
+     f"dates in 2019 and {int(covid_rates.loc[2020, 'matched_days'])} in 2020; 2020 has no traffic-observed "
+     f"dates in {month_names(missing_2020_months)}, so the comparison does not describe those months. "
+     f"The harm-crash index changed {changes['harm_crashes']:+.1f}% and the fatality index changed "
+     f"{changes['killed']:+.1f}%. Using only months sampled in both years, they changed "
+     f"{same_month_changes['harm_crashes']:+.1f}% and {same_month_changes['killed']:+.1f}%. "
+     "These are descriptive sample-based indices that are sensitive to which dates and roads were sampled; "
+     "changing roads, travel mix, and reporting can affect the comparison, and they do not isolate the "
+     "effect of lockdown policy.")
 
 # %% [markdown]
 # ### 7c. View sampled traffic, adjusted harm, and matched-date coverage
@@ -419,13 +436,12 @@ note(f"**2021 comparison:** the sampled-traffic-adjusted fatality index changed 
 def vision_zero_model(outcome, recording_adjustment=False, end='2019-12-01'):
     # Derive model-ready months from the data-preparation table, independently
     # of whether the plotting cell in Section 6 has been run.
-    model_months = monthly.loc[monthly.complete_month & monthly.complete_outcomes].copy()
-    table = model_months.loc[:end].copy()
-    table['t'] = table.index.year * 12 + table.index.month
-    table['t'] -= table['t'].min()
-    event_t = (2014 * 12 + 2) - (model_months.index.min().year * 12 + model_months.index.min().month)
+    table = monthly.loc[monthly.complete_month & monthly.complete_outcomes].loc[:end].copy()
+    month_number = table.index.year * 12 + table.index.month
+    table['t'] = month_number - month_number.min()
     table['post'] = (table.index >= '2014-02-01').astype(int)
-    table['after_t'] = (table.t - event_t).clip(lower=0)
+    # Months since February 2014, the first full post-launch month.
+    table['after_t'] = np.maximum(month_number - (2014 * 12 + 2), 0)
     table['recording'] = (table.index >= '2016-03-01').astype(int)
     table = table.loc[table.index != '2014-01-01'].copy()
     formula = f'{outcome} ~ t + C(month_of_year) + post + after_t'
@@ -443,13 +459,8 @@ def vision_zero_model(outcome, recording_adjustment=False, end='2019-12-01'):
                           'percent': (ratio - 1) * 100, 'months': len(table),
                           'pearson_dispersion': float(model.pearson_chi2 / model.df_resid)}
 
-vision_rows = []
-vision_models = {}
-for outcome in ['harm_crashes', 'injured', 'killed', 'ped_killed']:
-    for adjust in [False, True]:
-        model, table, result = vision_zero_model(outcome, adjust)
-        vision_rows.append(result)
-        vision_models[(outcome, adjust)] = (model, table)
+vision_rows = [vision_zero_model(outcome, adjust)[2]
+               for outcome in ['harm_crashes', 'injured', 'killed', 'ped_killed'] for adjust in [False, True]]
 vision_results = pd.DataFrame(vision_rows)
 vision_results.to_csv(OUT / 'vision_zero_model_contrasts.csv', index=False)
 display(vision_results[['outcome', 'recording_adjustment', 'percent', 'low', 'high', 'pearson_dispersion']].round(3))
@@ -474,8 +485,10 @@ vz_sensitivity = vision_results.loc[(vision_results.outcome == 'killed') & visio
 note(f"**Vision Zero model:** the fatality contrast at 12 months is {vz.percent:+.1f}% "
      f"(95% model interval {(vz.low-1)*100:+.1f}% to {(vz.high-1)*100:+.1f}%). "
      f"Adding the recording-change indicator gives {vz_sensitivity.percent:+.1f}%. "
-     "This is an association under a chosen pre-trend and seasonality model, not proof of causation. "
-     "Intervals crossing zero are compatible with either direction under this model.")
+     "This is an association under a chosen pre-trend and seasonality model, not proof of causation. " +
+     ('The interval crosses zero, so it is compatible with either direction under this model.'
+      if vz.low < 1 < vz.high else
+      'The interval excludes zero under this model; it does not account for confounding or the short pre-period.'))
 
 # %% [markdown]
 # ## 9. Did different road users experience the same change?
@@ -533,7 +546,6 @@ cam_summary['harm_per_1000_hours'] = cam_summary.harm_crashes / cam_summary.cloc
 display(cam_summary.round(3))
 # Month fixed effects compare time groups within each month. Cluster uncertainty by month.
 # There are 24 time clusters; intervals should be treated as approximate.
-camera_models = {}
 camera_results = []
 for outcome in ['harm_crashes', 'injured', 'killed']:
     model = smf.glm(f'{outcome} ~ treated + C(month_label) + treated:post', data=cam_window,
@@ -544,7 +556,6 @@ for outcome in ['harm_crashes', 'injured', 'killed']:
     camera_results.append({'outcome': outcome, 'ratio_of_rate_ratios': np.exp(coefficient),
                            'low': np.exp(interval.iloc[0]), 'high': np.exp(interval.iloc[1]),
                            'p_value': model.pvalues['treated:post']})
-    camera_models[outcome] = model
 camera_results = pd.DataFrame(camera_results)
 camera_results.to_csv(OUT / 'camera_policy_model_contrasts.csv', index=False)
 display(camera_results.round(4))
@@ -628,6 +639,11 @@ ax.invert_yaxis()
 fig.tight_layout()
 save_figure(fig, '07_camera_window_sensitivity')
 display(camera_sensitivity.round(4))
+six_month, placebo = camera_sensitivity.ratio.iloc[[0, 3]]
+note(f"**Camera window sensitivity:** the six-month 2022 estimate is {six_month:.3f} and the August 2021 "
+     f"placebo, which has no policy change, is {placebo:.3f}. Six-month windows compare different seasons, "
+     "so a placebo of similar size means those windows can pick up seasonal or recovery differences "
+     "between time groups. Only the 12-month comparison is season-balanced.")
 
 # %% [markdown]
 # ## 12. What the new street data add—and what they cannot tell us
@@ -642,7 +658,7 @@ road_table['fatalities_per_1000_harm_crashes'] = road_table.killed / road_table.
 road_table.to_csv(OUT / 'street_context_outcomes_2017_2019.csv')
 display(road_table[['crashes', 'harm_crashes', 'killed', 'harm_share', 'fatalities_per_1000_harm_crashes']].round(3))
 order = ['Inventory speed 25 or lower', 'Inventory speed 26–35', 'Inventory speed above 35',
-         'Mixed inventory speeds', 'Unmatched']
+         'Mixed inventory speeds', 'Matched, no speed value', 'Unmatched']
 plot = road_table.reindex(order).dropna(subset=['harm_share'])
 fig, ax = plt.subplots(figsize=(11, 4.5))
 ax.barh(plot.index, plot.harm_share, color=[BLUE if 'Inventory speed' in i else '#94a3b8' for i in plot.index])
@@ -737,13 +753,11 @@ checks = {
 }
 display(pd.Series(checks).to_frame('passed'))
 (OUT / 'validation_checks.json').write_text(json.dumps(checks, indent=2))
-placeholder_warning = ('The 2021 placebo estimate is visible in the sensitivity figure; inspect it before making a camera-effect claim. '
-                       'A low pre-trend p-value or unstable window estimates weakens the comparison.')
 summary = '# NYC crash policy analysis: findings from the executed notebook\n\n'
 summary += '\n\n'.join(FINDINGS)
 summary += '\n\n## What to say in a five-minute presentation\n\n'
 summary += ('1. Start with the distinction between crash reports and serious harm.\n'
-            '2. Show the COVID raw-versus-traffic-adjusted comparison and explain the April 2020 reporting change.\n'
+            '2. Show the COVID raw-versus-traffic-adjusted comparison, the months without traffic data, and the April 2020 reporting change.\n'
             '3. Show the Vision Zero contrast with its interval and specification sensitivity.\n'
             '4. Use the 24/7 camera time-group comparison as a focused policy question; show pre-trend and placebo diagnostics.\n'
             '5. Conclude with what the data support, what remains uncertain, and why a citywide causal risk estimate needs better exposure/control data.\n')
@@ -752,12 +766,13 @@ summary += ('- Do not call every drop in police reports a fall in actual crashes
             '- Do not label a conditional injury share or clock-hour rate as injury risk per vehicle.\n'
             '- Do not use snapshot inventory SPEED as the historical legal speed limit.\n'
             '- Do not label the all-Manhattan comparison as a toll-zone treatment effect.\n'
-            '- Do not interpret a policy-timed association as a proven causal effect.\n\n' + placeholder_warning)
+            '- Do not interpret a policy-timed association as a proven causal effect.\n')
 summary += '\n\n## Outputs\n\n' + '\n'.join(f'- {name}.png' for name in FIGURES)
 (OUT / 'findings.md').write_text(summary)
 (OUT / 'policy_results.json').write_text(json.dumps({
     'covid_annual_traffic_index_changes': changes.to_dict(),
-    'covid_annual_raw_count_changes': raw_changes.to_dict(),
+    'covid_annual_raw_per_matched_date_changes': raw_changes.to_dict(),
+    'covid_same_month_traffic_index_changes': same_month_changes.to_dict(),
     'covid_mean_daily_sampled_traffic_change_percent': float(traffic_change),
     'covid_fatality_index_ratio': float(fatal_ratio),
     'vision_zero': vision_results.to_dict('records'),
@@ -776,6 +791,9 @@ display(Markdown(summary))
 # - **Traffic normalization:** [Combined hourly traffic archive](https://github.com/ericmao2007/SSMU-Data-Challenge-I/blob/f92bea87dff7ee7a57e41b4af85535f571d1f5a1/data/other/Combined_Traffic_Volume_Counts_hourly.zip). Historical and automated counts are converted to complete location-days. Source hashes and filtering are recorded in the manifest and Section 7.
 # - **Policy and reporting dates:** official links in Section 3.
 # - **Statistical implementation:** [statsmodels GLM documentation](https://www.statsmodels.org/stable/glm.html).
-# - **AI assistance:** analysis/code were prepared with Codex at the user's request. The competition README asks participants to disclose AI use and include a link to the conversation in their presentation citations.
+# - **AI assistance:** analysis/code were prepared with Codex and reviewed with Claude Code at the user's request. The competition README asks participants to disclose AI use and include a link to the conversation in their presentation citations.
 #
 # **Rerun:** install `requirements-analysis.txt`, then run all cells in this notebook; or execute `python tools/run_policy_notebook.py` from the repository root. Cached inputs permit offline reruns. The browser report embeds its figures and folds code under “Show code.”
+#
+# ### Dataset citation (APA 7th edition)
+# City of New York—Motor Vehicle Collisions—Crashes. (n.d.). Data.Gov. Retrieved October 14, 2026, from http://catalog.data.gov/dataset/motor-vehicle-collisions-crashes

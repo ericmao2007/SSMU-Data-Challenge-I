@@ -2,7 +2,7 @@
   "repository": "https://github.com/ericmao2007/SSMU-Data-Challenge-I",
   "commit": "f92bea87dff7ee7a57e41b4af85535f571d1f5a1",
   "checked_on": "2026-10-17",
-  "python": "3.14.6",
+  "python": "3.14.7",
   "pandas": "3.0.6",
   "statsmodels": "0.15.0",
   "files": [

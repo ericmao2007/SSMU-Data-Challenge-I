@@ -5,11 +5,17 @@
     "injured": 8.42980253017338,
     "killed": 55.47270592807434
   },
-  "covid_annual_raw_count_changes": {
-    "crashes": -74.23048924912266,
-    "harm_crashes": -63.9760722922235,
-    "injured": -64.15129916657239,
-    "killed": -48.5981308411215
+  "covid_annual_raw_per_matched_date_changes": {
+    "crashes": -37.838432081853114,
+    "harm_crashes": -13.102586598035304,
+    "injured": -13.525271272037209,
+    "killed": 23.99229507027181
+  },
+  "covid_same_month_traffic_index_changes": {
+    "crashes": -31.43240602641685,
+    "harm_crashes": -4.140974868326264,
+    "injured": -3.712259755186309,
+    "killed": 34.95351624415031
   },
   "covid_mean_daily_sampled_traffic_change_percent": -20.2481912628228,
   "covid_fatality_index_ratio": 1.5547270592807434,
@@ -17,132 +23,132 @@
     {
       "outcome": "harm_crashes",
       "recording_adjustment": false,
-      "ratio": 0.9280978196648774,
-      "low": 0.8785687087892172,
-      "high": 0.9804191228865569,
-      "percent": -7.190218033512263,
+      "ratio": 0.9280978196648763,
+      "low": 0.8785687087892959,
+      "high": 0.9804191228864668,
+      "percent": -7.190218033512375,
       "months": 89,
-      "pearson_dispersion": 10.288240211559634
+      "pearson_dispersion": 10.288240211559753
     },
     {
       "outcome": "harm_crashes",
       "recording_adjustment": true,
-      "ratio": 0.8994242409801894,
-      "low": 0.851190770035252,
-      "high": 0.9503909038267491,
-      "percent": -10.057575901981064,
+      "ratio": 0.8994242409801873,
+      "low": 0.8511907700352721,
+      "high": 0.9503909038267223,
+      "percent": -10.057575901981275,
       "months": 89,
-      "pearson_dispersion": 4.533673887385903
+      "pearson_dispersion": 4.5336738873859375
     },
     {
       "outcome": "injured",
       "recording_adjustment": false,
-      "ratio": 0.9129175353352147,
-      "low": 0.863121001131939,
-      "high": 0.965587009503346,
-      "percent": -8.708246466478531,
+      "ratio": 0.9129175353352124,
+      "low": 0.8631210011319236,
+      "high": 0.9655870095033582,
+      "percent": -8.708246466478764,
       "months": 89,
-      "pearson_dispersion": 15.56129105160878
+      "pearson_dispersion": 15.561291051608746
     },
     {
       "outcome": "injured",
       "recording_adjustment": true,
-      "ratio": 0.8817051757135234,
-      "low": 0.833954564841234,
-      "high": 0.9321898933762839,
-      "percent": -11.829482428647664,
+      "ratio": 0.8817051757135294,
+      "low": 0.8339545648412539,
+      "high": 0.9321898933762744,
+      "percent": -11.829482428647065,
       "months": 89,
-      "pearson_dispersion": 6.0474862280184185
+      "pearson_dispersion": 6.0474862280184
     },
     {
       "outcome": "killed",
       "recording_adjustment": false,
-      "ratio": 0.6606375445831281,
-      "low": 0.5862794544701262,
-      "high": 0.7444265051165347,
-      "percent": -33.93624554168719,
+      "ratio": 0.6606375445831273,
+      "low": 0.5862794544701442,
+      "high": 0.74442650511651,
+      "percent": -33.93624554168727,
       "months": 89,
-      "pearson_dispersion": 1.0017774281972507
+      "pearson_dispersion": 1.0017774281972502
     },
     {
       "outcome": "killed",
       "recording_adjustment": true,
-      "ratio": 0.6600254470707461,
-      "low": 0.5854327695107594,
-      "high": 0.7441223202196097,
-      "percent": -33.997455292925395,
+      "ratio": 0.6600254470707451,
+      "low": 0.5854327695107089,
+      "high": 0.7441223202196716,
+      "percent": -33.997455292925494,
       "months": 89,
-      "pearson_dispersion": 1.0153457575139473
+      "pearson_dispersion": 1.0153457575139468
     },
     {
       "outcome": "ped_killed",
       "recording_adjustment": false,
-      "ratio": 0.5464844131023632,
-      "low": 0.42936794260808764,
-      "high": 0.6955461368396277,
-      "percent": -45.351558689763685,
+      "ratio": 0.5464844131023635,
+      "low": 0.42936794260805244,
+      "high": 0.6955461368396855,
+      "percent": -45.35155868976365,
       "months": 89,
-      "pearson_dispersion": 1.0773541059836125
+      "pearson_dispersion": 1.0773541059836105
     },
     {
       "outcome": "ped_killed",
       "recording_adjustment": true,
-      "ratio": 0.5390285826502212,
-      "low": 0.42344313974960573,
-      "high": 0.6861648841110477,
-      "percent": -46.097141734977875,
+      "ratio": 0.5390285826502199,
+      "low": 0.423443139749636,
+      "high": 0.6861648841109953,
+      "percent": -46.09714173497801,
       "months": 89,
-      "pearson_dispersion": 1.0876140836331638
+      "pearson_dispersion": 1.0876140836331705
     }
   ],
   "camera_main": [
     {
       "outcome": "harm_crashes",
-      "ratio_of_rate_ratios": 0.946005334273558,
-      "low": 0.8715585820416337,
-      "high": 1.0268111758794847,
-      "p_value": 0.18441128101601223
+      "ratio_of_rate_ratios": 0.9460053342735582,
+      "low": 0.8715585820416338,
+      "high": 1.026811175879485,
+      "p_value": 0.18441128101601345
     },
     {
       "outcome": "injured",
-      "ratio_of_rate_ratios": 0.9340460645048939,
-      "low": 0.8560100028010214,
-      "high": 1.0191960932258857,
-      "p_value": 0.12532437563520138
+      "ratio_of_rate_ratios": 0.934046064504895,
+      "low": 0.8560100028010225,
+      "high": 1.0191960932258868,
+      "p_value": 0.1253243756352073
     },
     {
       "outcome": "killed",
-      "ratio_of_rate_ratios": 1.0441451171006477,
-      "low": 0.6128788003816842,
-      "high": 1.778881933730053,
-      "p_value": 0.8737363000564309
+      "ratio_of_rate_ratios": 1.0441451171006488,
+      "low": 0.6128788003816853,
+      "high": 1.7788819337300534,
+      "p_value": 0.8737363000564276
     }
   ],
   "camera_sensitivity": [
     {
       "comparison": "2022 expansion: 6 months each side",
-      "ratio": 0.9109316777704645,
-      "low": 0.8399718873982839,
+      "ratio": 0.9109316777704648,
+      "low": 0.8399718873982847,
       "high": 0.9878860638251982
     },
     {
       "comparison": "2022 expansion: 12 months each side",
-      "ratio": 0.946005334273558,
-      "low": 0.8715585820416337,
-      "high": 1.0268111758794847
+      "ratio": 0.9460053342735582,
+      "low": 0.8715585820416338,
+      "high": 1.026811175879485
     },
     {
       "comparison": "2022 expansion: 18 months each side",
-      "ratio": 0.9215888340998418,
-      "low": 0.8660591930491888,
-      "high": 0.9806789027286122
+      "ratio": 0.9215888340998456,
+      "low": 0.8660591930491923,
+      "high": 0.9806789027286164
     },
     {
       "comparison": "Placebo August 2021: 6 months each side",
-      "ratio": 0.928320968037803,
-      "low": 0.849737517130204,
-      "high": 1.0141717910833334
+      "ratio": 0.9283209680378015,
+      "low": 0.8497375171302025,
+      "high": 1.0141717910833319
     }
   ],
-  "camera_pretrend_p": 0.8003541200344477
+  "camera_pretrend_p": 0.8003541200344155
 }

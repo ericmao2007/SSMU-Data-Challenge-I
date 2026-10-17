@@ -80,8 +80,6 @@ def main():
               for o in c.get('outputs', []) if o.output_type == 'error']
     if errors:
         raise RuntimeError('Notebook contains execution errors')
-    # Keep the previously shared normalized notebook synchronized with the source.
-    nbformat.write(notebook, ROOT / 'notebooks/nyc_policy_analysis_normalized.ipynb')
     output = export_html(notebook)
     print(f'Executed notebook: {path}\nBrowser report: {output}', flush=True)
 
