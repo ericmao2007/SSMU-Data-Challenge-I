@@ -6,3 +6,7 @@ data/motor_vehicle_collisions.csv
 .ipynb_checkpoints/
 data/other/*.csv
 *.csv
+!data/external/events/concert_calendar.csv
+!outputs/event_analysis/*.csv
+!outputs/covid_reporting_analysis/*.csv
+!outputs/crash_timelapse/*.csv

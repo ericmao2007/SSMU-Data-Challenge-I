@@ -1,0 +1,17 @@
+artist,venue,outcome,event_nights,event_total,matched_expected_total,event_mean,reference_mean,percent_difference
+BTS,Citi Field,crashes,1,3.0,0.875,3.0,0.875,242.85714285714283
+BTS,Citi Field,harm_crashes,1,2.0,0.25,2.0,0.25,700.0
+BTS,Citi Field,pedestrians_injured,1,0.0,0.125,0.0,0.125,-100.0
+BTS,Citi Field,people_injured,1,3.0,0.25,3.0,0.25,1100.0
+Beyonce,Citi Field,crashes,2,8.0,2.75,4.0,1.375,190.9090909090909
+Beyonce,Citi Field,harm_crashes,2,1.0,0.875,0.5,0.4375,14.28571428571428
+Beyonce,Citi Field,pedestrians_injured,2,0.0,0.0,0.0,0.0,
+Beyonce,Citi Field,people_injured,2,1.0,1.125,0.5,0.5625,-11.111111111111116
+Harry Styles,Madison Square Garden,crashes,15,23.0,32.60952380952381,1.5333333333333334,2.173968253968254,-29.46845794392523
+Harry Styles,Madison Square Garden,harm_crashes,15,7.0,11.473809523809523,0.4666666666666667,0.7649206349206349,-38.991492010790616
+Harry Styles,Madison Square Garden,pedestrians_injured,15,1.0,5.110714285714286,0.06666666666666667,0.3407142857142857,-80.43326345213137
+Harry Styles,Madison Square Garden,people_injured,15,7.0,11.911904761904761,0.4666666666666667,0.7941269841269841,-41.23525884469318
+Pink,Citi Field,crashes,1,2.0,0.25,2.0,0.25,700.0
+Pink,Citi Field,harm_crashes,1,1.0,0.125,1.0,0.125,700.0
+Pink,Citi Field,pedestrians_injured,1,0.0,0.0,0.0,0.0,
+Pink,Citi Field,people_injured,1,2.0,0.125,2.0,0.125,1500.0

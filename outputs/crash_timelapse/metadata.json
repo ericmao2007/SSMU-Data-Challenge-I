@@ -1,0 +1,23 @@
+{
+  "input_rows": 2269187,
+  "invalid_date_rows": 0,
+  "input_first_date": "2012-07-01",
+  "input_last_date": "2026-06-11",
+  "first_frame": "2012-07",
+  "last_frame": "2026-05",
+  "frames": 167,
+  "cell_size_km": 0.25,
+  "gaussian_sigma_km": 0.3,
+  "metric": "All reported crashes with valid coordinates in the NYC map extent; smoothed counts per square km per day.",
+  "exclusion": "Incomplete edge months excluded. Missing/out-of-extent coordinates omitted from map; monthly reported totals include them.",
+  "comparison": "One fixed map extent and color scale across frames; power normalization gamma=0.5. No normalization by traffic exposure.",
+  "boundary_source": "https://data.cityofnewyork.us/resource/gthc-hcne.geojson?$limit=5",
+  "boundary_accessed": "2026-10-17",
+  "crash_source": "https://catalog.data.gov/dataset/motor-vehicle-collisions-crashes",
+  "gif_frames_verified": 167,
+  "fixed_color_maximum": 11.0,
+  "frame_duration_ms": 180,
+  "first_pause_ms": 1000,
+  "last_pause_ms": 1800,
+  "gif_bytes": 18653334
+}

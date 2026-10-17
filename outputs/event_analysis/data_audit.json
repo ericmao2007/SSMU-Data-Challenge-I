@@ -1,0 +1,12 @@
+{
+  "input_rows": 2269187,
+  "input_min_date": "2012-07-01",
+  "input_max_date": "2026-06-11",
+  "selected_duplicate_ids_removed": 0,
+  "selected_rows": 56964,
+  "selected_valid_coordinate_share": 0.9025349343444983,
+  "selected_invalid_time_rows": 0,
+  "selected_nights": 99,
+  "concert_nights": 19,
+  "venue_coordinates": "Approximate venue center, WGS84; straight-line distance, not road-network travel distance."
+}

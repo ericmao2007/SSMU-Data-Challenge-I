@@ -1,0 +1,10 @@
+{
+  "daily_input_sha256": "d06553871d02f67184402d8fda318dc97a4225e80838311f0cfd4927dc9d2b6a",
+  "classification_reconciles": true,
+  "equal_14_day_periods": true,
+  "reference_offset_days": 364,
+  "main_date_count": 175,
+  "specifications": 5,
+  "unknown_harm_2020_Jan_June": 1.0,
+  "April_to_June_traffic_observed_days": 0
+}

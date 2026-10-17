@@ -1,0 +1,39 @@
+{
+  "accessed": "2026-10-17",
+  "method": "Online sources read with web search/browser; date/venue facts transcribed into cached CSV. No claim of automated event API coverage.",
+  "calendar_sha256": "18b13a340819d491e922ea10fcfe0417e5545c13a8992f02db726035290b06fd",
+  "sources": {
+    "beyonce_mlb": {
+      "url": "https://www.mlb.com/amp/news/beyonce-to-perform-at-citi-field-june-7-8-c163902796.html",
+      "supports": "Beyonce: June 7\u20138, 2016, Citi Field"
+    },
+    "bts_aeg": {
+      "url": "https://aegworldwide.com/press-center/press-releases/bts-confirms-highly-anticipated-details-their-first-stadium-show-us",
+      "supports": "BTS: October 6, 2018, Citi Field"
+    },
+    "pink_mlb": {
+      "url": "https://www.mlb.com/press-release/press-release-pink-summer-carnival-at-citi-field-in-2023",
+      "supports": "Pink: August 3, 2023, Citi Field"
+    },
+    "harry_tour": {
+      "url": "https://www.seatstories.com/news/harry-styles-five-dates-added-new-york-los-angeles-harrys-house-tickets",
+      "supports": "Harry Styles individual dates; syndicated TicketNews tour announcement. September 8 also cross-checked against the retrospective performance record."
+    },
+    "harry_msg": {
+      "url": "https://www.msgentertainment.com/msg-is-harrys-house-harry-styles-makes-history-at-madison-square-garden-as-banner-is-raised-to-the-rafters-following-15-consecutive-nights-of-love-on-tour-at-the-garden/",
+      "supports": "Venue confirmation of 15 shows, August 20\u2013September 21, 2022"
+    },
+    "harry_fader": {
+      "url": "https://www.thefader.com/2022/08/26/harry-styles-uk-eu-tour-dates-2023",
+      "supports": "Additional published tour schedule cross-check: August 28 and all nine September MSG dates"
+    },
+    "harry_sep8": {
+      "url": "https://www.setlist.fm/setlist/harry-styles/2022/madison-square-garden-new-york-ny-5bb0f7fc.html",
+      "supports": "Supplemental retrospective confirmation of September 8 performance"
+    },
+    "crashes": {
+      "url": "https://catalog.data.gov/dataset/motor-vehicle-collisions-crashes",
+      "supports": "City of New York police-reported motor vehicle collisions; local competition CSV"
+    }
+  }
+}
