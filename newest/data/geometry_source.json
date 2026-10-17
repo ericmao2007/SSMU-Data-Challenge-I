@@ -1,0 +1,5 @@
+{
+  "url": "https://data.cityofnewyork.us/resource/inkn-q76z.json?%24where=boroughcode+%3D+%274%27+AND+within_box%28the_geom%2C40.765%2C-73.915%2C40.743%2C-73.86%29&%24limit=5000",
+  "accessed": "2026-10-17",
+  "segments": 2235
+}

@@ -146,9 +146,10 @@ def run():
         ax.grid(axis='x',alpha=.15); ax.set_axisbelow(True)
         ax.legend(loc='lower left',bbox_to_anchor=(0,1.01),frameon=False,ncol=2,fontsize=11)
         fig.suptitle(title,x=.04,y=.98,ha='left',fontsize=20,fontweight='bold')
-        fig.text(.04,.91,subtitle,fontsize=12,color='#435166')
-        fig.text(.04,.035,'Within 1 km of venue | 4 p.m. to 2 a.m. next day | Expected = same weekday in nearby weeks',
-                 fontsize=10,color='#435166')
+        if filename != 'concert_comparison.png':
+            fig.text(.04,.91,subtitle,fontsize=12,color='#435166')
+            fig.text(.04,.035,'Within 1 km of venue | 4 p.m. to 2 a.m. next day | Expected = same weekday in nearby weeks',
+                     fontsize=10,color='#435166')
         fig.subplots_adjust(left=.25,right=.94,bottom=.18,top=.76)
         fig.savefig(OUT/filename,facecolor='white'); plt.close(fig)
     p=result[result.outcome=='crashes'].copy()
@@ -183,10 +184,7 @@ def run():
         ax.set_xlabel('Average reported crashes per night')
     axes[0].invert_yaxis()
     fig.suptitle('Does the result change when we widen the area?',x=.04,y=.98,ha='left',fontsize=20,fontweight='bold')
-    fig.text(.04,.91,'The same concert nights, counted at three distances from each venue.',fontsize=12,color='#435166')
     fig.legend(*axes[0].get_legend_handles_labels(),loc='upper left',bbox_to_anchor=(.14,.87),ncol=2,frameon=False,fontsize=11)
-    fig.text(.04,.045,'4 p.m. to 2 a.m. next day | Areas overlap: the 2 km area includes the 500 m and 1 km areas.',fontsize=10,color='#435166')
-    fig.text(.04,.015,'Four Citi Field nights; 15 MSG nights. These comparisons do not establish that concerts caused crashes.',fontsize=10,color='#435166')
     fig.subplots_adjust(left=.15,right=.96,top=.70,bottom=.19,wspace=.20)
     fig.savefig(OUT/'distance_sensitivity.png',facecolor='white'); plt.close(fig)
     main=overall[overall.outcome=='crashes'].iloc[0]

@@ -1,0 +1,25 @@
+{
+  "years": [
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018,
+    2019,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025
+  ],
+  "excluded_years": {
+    "2012": "Partial year",
+    "2020": "Pandemic and reporting transition",
+    "2026": "Partial year"
+  },
+  "method": "Actual counts divided by calendar days. Monthly profiles average years equally; no yearly indexing. Injury panels use separate labeled scales.",
+  "interpretation": "Cyclist and motorist injuries are related outcomes, not measures of trips or exposure. Warm-weather activity is a hypothesis; this graph cannot identify a cause or separate exposure from risk.",
+  "source": "https://data.cityofnewyork.us/Transportation/Motor-Vehicle-Collisions-Crashes/h9gi-nx95",
+  "traffic_adjusted": false
+}

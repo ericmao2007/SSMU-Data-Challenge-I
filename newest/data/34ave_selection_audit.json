@@ -1,0 +1,19 @@
+{
+  "named_corridor_candidates": 1244,
+  "spatial_outliers": 0,
+  "missing_coordinates_retained": 22,
+  "selected_crashes": 1254,
+  "mapped_crashes": 1232,
+  "unknown_harm_status": 6,
+  "distance_m": 35,
+  "definition": "Named 34 AVE on/cross street, within 35m of official corridor centerlines including intersections. Missing coordinates retained only with Queens and an explicit corridor cross street.",
+  "west_endpoint": [
+    -73.89715853745,
+    40.752465237073
+  ],
+  "east_endpoint": [
+    -73.87269143245851,
+    40.7550334118905
+  ],
+  "geometry_is_current_not_historical": true
+}

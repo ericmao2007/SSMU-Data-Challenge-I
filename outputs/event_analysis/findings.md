@@ -39,7 +39,7 @@ Coordinates use approximate venue centers and haversine distance. Local results 
 
 ## Reproduce
 
-Run `.venv/bin/python notebooks/nyc_event_analysis.py` from the repository. The cached event calendar permits offline reruns. Outputs include matched comparisons, exact reference dates, outcome summaries, radius/time sensitivities, PNG figures, an HTML report and a notebook. Existing policy analysis files are separate.
+Run the six code cells in this notebook in order, from the repository root or notebooks folder. The concert calendar is embedded. The only data input required is the local `data/motor_vehicle_collisions.csv`; install numpy, pandas and matplotlib in the notebook environment. Cells rebuild comparison tables and PNG graphs without the companion script or precomputed outputs.
 
 ## Sources
 

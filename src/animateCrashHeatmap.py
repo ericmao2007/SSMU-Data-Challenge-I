@@ -18,7 +18,7 @@ from scipy.ndimage import gaussian_filter
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.colors import LinearSegmentedColormap, PowerNorm
+from matplotlib.colors import LinearSegmentedColormap, PowerNorm, to_rgba
 from matplotlib.patches import Polygon
 from PIL import Image
 
@@ -28,10 +28,12 @@ BOUNDARY=ROOT/'data/external/maps/nyc_boroughs.geojson'
 BOUNDARY_URL='https://data.cityofnewyork.us/resource/gthc-hcne.geojson?$limit=5'
 WEST,SOUTH,EAST,NORTH=-74.26,40.49,-73.68,40.92
 CELL_KM=.25
+GAUSSIAN_SIGMA_CELLS=.4
 DX=CELL_KM/(111.32*cos(radians(40.7)))
 DY=CELL_KM/111.32
 NX,NY=ceil((EAST-WEST)/DX),ceil((NORTH-SOUTH)/DY)
-BG,LAND,EDGE,TEXT,MUTED='#0c1422','#233346','#667b91','#f1f5f9','#a8b8ca'
+THEME='#BDE254'
+BG,LAND,EDGE,TEXT,MUTED='#ffffff','#edf0e8','#687560','#355500','#46543d'
 
 
 def load_months():
@@ -67,13 +69,13 @@ def load_months():
         days=month.days_in_month
         grid=grids[month]
         assert int(grid.sum())==mapped[month]
-        density.append(gaussian_filter(grid,sigma=1.2,mode='constant')/(days*CELL_KM**2))
+        density.append(gaussian_filter(grid,sigma=GAUSSIAN_SIGMA_CELLS,mode='constant')/(days*CELL_KM**2))
         summary.append({'month':str(month),'days':days,'reported_crashes':totals[month],
                         'mapped_crashes':mapped[month], 'mapped_crashes_per_day':mapped[month]/days,
                         'mapped_share':mapped[month]/totals[month]})
     audit={'input_rows':rows,'invalid_date_rows':invalid_dates,'input_first_date':str(first.date()),
            'input_last_date':str(last.date()),'first_frame':str(months[0]),'last_frame':str(months[-1]),
-           'frames':len(months),'cell_size_km':CELL_KM,'gaussian_sigma_km':.3,
+           'frames':len(months),'cell_size_km':CELL_KM,'gaussian_sigma_km':round(GAUSSIAN_SIGMA_CELLS*CELL_KM,3),
            'metric':'All reported crashes with valid coordinates in the NYC map extent; smoothed counts per square km per day.',
            'exclusion':'Incomplete edge months excluded. Missing/out-of-extent coordinates omitted from map; monthly reported totals include them.',
            'comparison':'One fixed map extent and color scale across frames; power normalization gamma=0.5. No normalization by traffic exposure.',
@@ -88,26 +90,26 @@ def render(months,density,summary,audit,frame_ms):
         urlretrieve(BOUNDARY_URL,BOUNDARY)
     geo=json.loads(BOUNDARY.read_text())
     assert len(geo['features'])==5
-    # A fixed scale includes the global peak; gamma makes lower-density streets visible.
-    maximum=float(np.ceil(density.max()))
-    norm=PowerNorm(gamma=.5,vmin=0,vmax=maximum)
-    cmap=LinearSegmentedColormap.from_list('crash_glow',[
-        (0,(.14,.20,.27,0)),(.06,(1,.81,.25,.30)),
-        (.25,(1,.68,.12,.70)),(.55,(1,.32,.10,.92)),(1,(1,.08,.12,1))])
+    # Keep one scale across months, with rare peaks saturated for clearer contrast.
+    maximum=6.0
+    norm=PowerNorm(gamma=.5,vmin=0,vmax=maximum,clip=True)
+    cmap=LinearSegmentedColormap.from_list('crash_warm',[
+        (0,to_rgba(LAND,0)),(.06,to_rgba('#efba83',.65)),
+        (.25,to_rgba('#e47732',.95)),(.55,to_rgba('#bf3c20',1)),
+        (1,to_rgba('#731b16'))])
     plt.rcParams.update({'font.family':'DejaVu Sans','text.color':TEXT,'axes.labelcolor':MUTED,
                          'xtick.color':MUTED,'ytick.color':MUTED,'font.size':11})
     fig=plt.figure(figsize=(11,9),dpi=100,facecolor=BG)
     fig.text(.04,.955,'NYC crashes through time',fontsize=25,fontweight='bold')
-    fig.text(.04,.92,'One month per frame · all reported vehicle collisions',fontsize=12,color=MUTED)
-    ax=fig.add_axes([.025,.235,.72,.66],facecolor=BG)
+    ax=fig.add_axes([.025,.235,.72,.70],facecolor=BG)
     for f in geo['features']:
         geometry=f['geometry']; polys=geometry['coordinates']
         if geometry['type']=='Polygon': polys=[polys]
         for polygon in polys:
             # Outer shorelines; interior rings are not material at this map scale.
-            ax.add_patch(Polygon(polygon[0],closed=True,facecolor=LAND,edgecolor=EDGE,lw=.45,zorder=1))
+            ax.add_patch(Polygon(polygon[0],closed=True,facecolor=LAND,edgecolor=EDGE,lw=.75,zorder=1))
     heat=ax.imshow(density[0],origin='lower',extent=[WEST,WEST+NX*DX,SOUTH,SOUTH+NY*DY],
-                   cmap=cmap,norm=norm,interpolation='bilinear',zorder=2)
+                   cmap=cmap,norm=norm,interpolation='nearest',zorder=2)
     ax.set_xlim(WEST,EAST); ax.set_ylim(SOUTH,NORTH)
     ax.set_aspect(1/cos(radians(40.7))); ax.set_axis_off()
     for label,x,y in [('Manhattan',-74.027,40.795),('Bronx',-73.86,40.875),
@@ -115,35 +117,27 @@ def render(months,density,summary,audit,frame_ms):
                       ('Staten\nIsland',-74.16,40.57)]:
         ax.text(x,y,label,ha='center',va='center',fontsize=11,color=TEXT,zorder=3,
                 bbox={'facecolor':BG,'alpha':.78,'edgecolor':'none','pad':3})
-    # A short distance bar uses the same local-distance approximation as the raster.
-    x0,y0=-74.245,40.515
-    ax.plot([x0,x0+5/(111.32*cos(radians(40.7)))],[y0,y0],color=TEXT,lw=2)
-    ax.text(x0,y0+.007,'5 km',fontsize=9,color=MUTED)
-    month_text=fig.text(.77,.84,'',fontsize=24,fontweight='bold')
-    fig.text(.77,.78,'CRASHES ON MAP',fontsize=10,color=MUTED,fontweight='bold')
-    count_text=fig.text(.77,.738,'',fontsize=25,fontweight='bold')
-    daily_text=fig.text(.77,.700,'',fontsize=12,color=MUTED)
-    coverage_text=fig.text(.77,.655,'',fontsize=10,color=MUTED)
-    fig.text(.77,.59,'Hotter color = more\ncrashes in that area',fontsize=12,linespacing=1.6)
-    cax=fig.add_axes([.78,.51,.17,.018],facecolor=LAND)
-    cb=fig.colorbar(heat,cax=cax,orientation='horizontal',ticks=[0,maximum/4,maximum])
-    cb.outline.set_visible(False); cb.ax.tick_params(labelsize=9,length=0)
-    fig.text(.77,.455,'Smoothed crashes\nper km² per day',fontsize=10,color=MUTED,linespacing=1.5)
-    fig.text(.77,.36,'Same color scale\nin every frame.',fontsize=12,fontweight='bold',linespacing=1.5)
-    fig.text(.77,.265,'Counts show crash burden,\nnot risk per trip.',fontsize=10,color=MUTED,linespacing=1.5)
+    month_text=fig.text(.865,.79,'',ha='center',fontsize=26,fontweight='bold')
+    fig.text(.865,.727,'CRASHES ON MAP',ha='center',fontsize=11,color=MUTED,fontweight='bold')
+    count_text=fig.text(.865,.672,'',ha='center',fontsize=34,fontweight='bold')
+    daily_text=fig.text(.865,.630,'',ha='center',fontsize=13,color=MUTED)
+    cax=fig.add_axes([.775,.545,.18,.022],facecolor=LAND)
+    cb=fig.colorbar(heat,cax=cax,orientation='horizontal',ticks=[0,maximum/4,maximum],extend='max')
+    cb.outline.set_visible(False); cb.ax.tick_params(labelsize=10,length=0)
+    cb.ax.set_xticklabels(['0',f'{maximum/4:g}',f'{maximum:g}+'])
+    fig.text(.865,.480,'Smoothed crashes\nper km² per day',ha='center',fontsize=11,color=MUTED,linespacing=1.5)
     timeline=fig.add_axes([.08,.12,.85,.085],facecolor=BG)
     values=summary.mapped_crashes_per_day.to_numpy()
     x=np.arange(len(months))
-    timeline.plot(x,values,color='#6d829d',lw=1.5)
-    dot,=timeline.plot([0],[values[0]],'o',color='#ffb62e',ms=7)
-    line=timeline.axvline(0,color='#ffb62e',alpha=.7,lw=1)
+    timeline.plot(x,values,color=MUTED,lw=2)
+    dot,=timeline.plot([0],[values[0]],'o',color='#731b16',ms=8)
+    line=timeline.axvline(0,color='#731b16',alpha=.9,lw=1.5)
     timeline.set_xlim(0,len(months)-1); timeline.set_ylim(0,values.max()*1.12)
     ticks=[i for i,m in enumerate(months) if m.month==1 and m.year in [2013,2016,2020,2023,2026]]
     timeline.set_xticks(ticks,[str(months[i].year) for i in ticks]); timeline.set_yticks([])
     for spine in timeline.spines.values(): spine.set_visible(False)
     timeline.tick_params(length=0)
     fig.text(.08,.22,'Mapped crashes per day across the whole city',fontsize=10,color=MUTED)
-    fig.text(.04,.052,f'{months[0].strftime("%b %Y")}–{months[-1].strftime("%b %Y")} · Incomplete edge months excluded · Missing map coordinates omitted',fontsize=10,color=MUTED)
     fig.text(.04,.027,'Sources: NYC Motor Vehicle Collisions / NYC DCP borough boundaries · Reporting and travel changed in 2020',fontsize=9,color=MUTED)
     frames=[]; palette=None
     for i,month in enumerate(months):
@@ -151,7 +145,6 @@ def render(months,density,summary,audit,frame_ms):
         month_text.set_text(month.strftime('%b %Y'))
         count_text.set_text(f'{int(row.mapped_crashes):,}')
         daily_text.set_text(f'{row.mapped_crashes_per_day:,.0f} crashes / day')
-        coverage_text.set_text(f'{row.mapped_share:.0%} of reports mapped')
         dot.set_data([i],[values[i]]); line.set_xdata([i,i])
         fig.canvas.draw()
         rgb=Image.fromarray(np.asarray(fig.canvas.buffer_rgba())[:,:,:3].copy())
@@ -172,6 +165,13 @@ def render(months,density,summary,audit,frame_ms):
         assert gif.n_frames==len(months)
         assert gif.info.get('loop')==0
         audit.update({'gif_frames_verified':gif.n_frames,'fixed_color_maximum':maximum,
+                      'theme_color':THEME,'theme_applies_to':'Green theme with dark green text for contrast',
+                      'text_color':TEXT,'secondary_text_color':MUTED,
+                      'background_color':BG,'heatmap_interpolation':'nearest',
+                      'heatmap_palette':'High-contrast amber, burnt orange, and deep brick red on pale gray-green land.',
+                      'color_scale_rule':'Fixed 0–6+ scale across all months; values above 6 saturated.',
+                      'density_global_peak':float(density.max()),
+                      'comparison':'One fixed map extent and capped color scale across frames; power normalization gamma=0.5. No normalization by traffic exposure.',
                       'frame_duration_ms':frame_ms,'first_pause_ms':1000,'last_pause_ms':1800,
                       'gif_bytes':target.stat().st_size})
     (OUT/'metadata.json').write_text(json.dumps(audit,indent=2))
@@ -197,9 +197,12 @@ def main():
         'Use `--frame-ms 300` for slower playback. Requires numpy, pandas, scipy, matplotlib and Pillow. '
         'The cached borough outlines allow offline reruns.\n\n'
         'Frames exclude incomplete edge months and omit crashes missing usable coordinates. '
-        'The displayed mapped share varies over time; reporting rules and travel changed in 2020. '
-        'Colors indicate burden, not risk per trip or a causal trend. Smoothing uses 250 m cells and a 300 m Gaussian sigma. '
+        'The mapped share varies over time; reporting rules and travel changed in 2020. '
+        'Colors indicate burden, not risk per trip or a causal trend. Smoothing uses 250 m cells and a 100 m Gaussian sigma. '
+        'Nearest-neighbor rendering keeps individual map cells sharp. '
         'The color scale uses a square-root transformation to keep lower concentrations visible.\n\n'
+        'The fixed color scale runs from 0 to 6+ crashes per km² per day. '
+        'Values above 6 use the hottest color.\n\n'
         'Sources: [NYC crashes](https://catalog.data.gov/dataset/motor-vehicle-collisions-crashes); '
         '[NYC DCP borough boundaries](https://data.cityofnewyork.us/City-Government/Borough-Boundaries/gthc-hcne). '
         'Boundaries retrieved October 17, 2026. See metadata.json for coverage and export checks.\n')
