@@ -17,8 +17,8 @@
     "03_vision_zero_before_after_trends.png",
     "04_reporting_change_stacked_rates.png",
     "05_reporting_change_monthly_trends.png",
-    "06_34ave_before_after_map.png",
-    "07_34ave_crashes_over_time.png",
+    "06_34av_before_after_map.png",
+    "07_34av_crashes_over_time.png",
     "08_34ave_period_comparison.png",
     "09_april6_six_year_monthly_trends.png",
     "10_april6_three_year_before_after.png",
@@ -64,8 +64,8 @@
     "traffic_adjusted": false
   },
   "inputs_sha256": {
-    "data/processed/daily_policy_panel.csv": "d06553871d02f67184402d8fda318dc97a4225e80838311f0cfd4927dc9d2b6a",
-    "data/processed/monthly_policy_panel.csv": "b6c2f8af541b94c7df141e337971dc2a0d96df92dc176728639239140b8bb3e3",
+    "data/processed/daily_policy_panel.csv": "708e7f2534d933b3a4527736146de33dbe0ea33bdd66f65a2051864c96ead265",
+    "data/processed/monthly_policy_panel.csv": "e6b4a39cd6f266d023d174789b7c548a4a642dd375f2ef95be2769030edcf69c",
     "data/processed/daily_crashes_with_traffic_coverage.csv": "f02a26063e931e3372893efae009152cf99d9cb407b3d7490b5b4476b8d91d21",
     "newest/data/street_centerlines.json": "49946ba8504c9dc63c2e5ec8306be0208d6002b51b19e97cd96d1437913b7bd6"
   }

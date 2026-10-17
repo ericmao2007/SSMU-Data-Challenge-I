@@ -129,30 +129,6 @@ def match_traffic(daily, hourly, exposure):
     return frame, matched, daily_baseline, hourly_baseline
 
 
-def normalize_annual_by_traffic(daily_outcomes, exposure):
-    """Annual outcome/traffic indices using the same observed dates on both sides."""
-    if not daily_outcomes.index.is_unique or not exposure.index.is_unique:
-        raise ValueError("Daily outcomes and traffic must have one row per date.")
-    metrics = ["crashes", "harm_crashes", "injured", "killed"]
-    traffic = exposure[list(range(24))].sum(axis=1, min_count=24)
-    matched = daily_outcomes[metrics].join(traffic.rename("traffic"), how="inner")
-    matched = matched.loc[matched.traffic.gt(0) & matched[metrics].notna().all(axis=1)].copy()
-    if matched.empty:
-        raise ValueError("No overlapping crash dates with positive, complete traffic counts.")
-    matched["sites"] = exposure["sites"].reindex(matched.index)
-    annual = matched[metrics + ["traffic"]].resample("YS").sum(min_count=1)
-    annual["matched_days"] = matched.resample("YS").size()
-    annual["mean_sites"] = matched.sites.resample("YS").mean()
-    annual = annual.loc[annual.matched_days.gt(0)].copy()
-    annual["mean_daily_traffic"] = annual.traffic / annual.matched_days
-    for metric in metrics:
-        baseline = matched[metric].sum() / matched.traffic.sum()
-        annual[f"{metric}_index"] = annual[metric] / annual.traffic / baseline if baseline > 0 else float("nan")
-    annual.index = annual.index.year
-    annual.index.name = "year"
-    return annual
-
-
 def hourly_chart(matched, baseline):
     """Year slider; each hour uses injuries and exposure from identical dates."""
     years = sorted(matched.index.get_level_values("date").year.unique())

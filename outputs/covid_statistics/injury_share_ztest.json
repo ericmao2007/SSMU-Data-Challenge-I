@@ -1,0 +1,29 @@
+{
+  "before_months": "2017-01 to 2020-02",
+  "after_months": "2020-04 to 2022-12",
+  "before_harm_crashes": 142102,
+  "before_known_crashes": 702092,
+  "p_before": 0.20239797633358592,
+  "after_harm_crashes": 102896,
+  "after_known_crashes": 288212,
+  "p_after": 0.3570149750877826,
+  "difference_pp": 15.46169987541967,
+  "difference_ci_pp": [
+    15.263132006484645,
+    15.660267744354698
+  ],
+  "risk_ratio": 1.7639256160316636,
+  "risk_ratio_ci": [
+    1.7520586948004475,
+    1.7758729134625617
+  ],
+  "z": 161.97424681767885,
+  "p_value": 0.0,
+  "quasi_binomial_odds_ratio": 2.1612039884441363,
+  "quasi_binomial_odds_ratio_ci": [
+    2.0525450792976314,
+    2.2756151505647635
+  ],
+  "quasi_binomial_p": 1.7922753381824225e-188,
+  "quasi_binomial_dispersion": 28.54372579779386
+}

@@ -4,6 +4,30 @@ Welcome to Data Challenge I! You and your teammates will have from 11 am to 5:30
 
 This Git repository contains this `README` file and the dataset in a `CSV` format. If you are a Duke student, we recommend you use Duke's Container Manager to access your preferred IDE.
 
+## Our Analysis
+
+| Path | What it is |
+| --- | --- |
+| `newest/nyc_crash_graphs.ipynb` | Main notebook: COVID, Vision Zero, April 2020 reporting change, 34th Avenue Open Street, and seasonality graphs (`newest/graphs/`, tables in `newest/data/`). |
+| `analysis/build-panels.py` | Downloads and verifies the raw archives, then builds the daily/monthly crash panels in `data/processed/` that everything else reads. |
+| `analysis/covid-statistics.py` | Segmented regression and injury-share z test around the March 2020 COVID break → `outputs/covid_statistics/`. |
+| `analysis/vision-zero-statistics.py` | Segmented regression of injuries and deaths around Vision Zero → `outputs/vision_zero_statistics/`. |
+| `analysis/34ave-statistics.py` | Difference-in-differences of 34th Avenue against parallel avenues → `outputs/34ave_statistics/`. |
+| `src/` | Standalone visualizations: traffic-adjusted time patterns, injury heatmap, monthly crash animations → `outputs/`. |
+
+Run from the repository root:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+python -m pip install -r requirements.txt
+python analysis/build-panels.py        # first: data download + panels
+python analysis/covid-statistics.py
+python analysis/vision-zero-statistics.py
+python analysis/34ave-statistics.py
+```
+
+Then open `newest/nyc_crash_graphs.ipynb` and run all cells. Results describe police-reported crashes. The April 2020 reporting change, shifting travel volumes, and the lack of randomized comparisons all limit causal claims.
+
 ## How to Participate
 
 1. Fork the repository emailed to you by susan.li@duke.edu

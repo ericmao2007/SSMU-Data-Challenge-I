@@ -1,0 +1,65 @@
+{
+  "34 AVE": {
+    "named_corridor_candidates": 1244,
+    "spatial_outliers": 0,
+    "missing_coordinates_retained": 22,
+    "centerline_segments": 54,
+    "west_endpoint": [
+      -73.89715853745,
+      40.752465237073
+    ],
+    "east_endpoint": [
+      -73.87269143245851,
+      40.7550334118905
+    ],
+    "selected_crashes": 1254,
+    "matches_newest_selection": true
+  },
+  "35 AVE": {
+    "named_corridor_candidates": 1048,
+    "spatial_outliers": 2,
+    "missing_coordinates_retained": 16,
+    "centerline_segments": 28,
+    "west_endpoint": [
+      -73.89654169367,
+      40.750550226262
+    ],
+    "east_endpoint": [
+      -73.871793701811,
+      40.753333921579
+    ],
+    "selected_crashes": 1124
+  },
+  "37 AVE": {
+    "named_corridor_candidates": 2103,
+    "spatial_outliers": 6,
+    "missing_coordinates_retained": 11,
+    "centerline_segments": 44,
+    "west_endpoint": [
+      -73.89611483070065,
+      40.74851252390933
+    ],
+    "east_endpoint": [
+      -73.870843415856,
+      40.751552944935
+    ],
+    "selected_crashes": 2215
+  },
+  "32 AVE": {
+    "named_corridor_candidates": 833,
+    "spatial_outliers": 0,
+    "missing_coordinates_retained": 13,
+    "centerline_segments": 34,
+    "west_endpoint": [
+      -73.897911065835,
+      40.756413627023
+    ],
+    "east_endpoint": [
+      -73.874513340115,
+      40.758601600127
+    ],
+    "selected_crashes": 852
+  },
+  "shared_between_corridors_dropped": 0,
+  "last_crash_date": "2026-06-07"
+}

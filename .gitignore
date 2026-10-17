@@ -1,15 +1,15 @@
 .DS_Store
 __pycache__/
 *.py[cod]
-data/motor_vehicle_collisions.csv
 .venv/
 .ipynb_checkpoints/
-data/other/*.csv
+
+# Raw and processed data are downloaded and rebuilt by analysis/build-panels.py;
+# small derived tables that back the graphs and statistics are kept.
 *.csv
 !data/external/events/concert_calendar.csv
-!outputs/event_analysis/*.csv
-!outputs/covid_reporting_analysis/*.csv
-!outputs/crash_timelapse/*.csv
+!newest/data/*.csv
+!outputs/**/*.csv
 
 # Local regenerable graph cache
 /graft/
